@@ -15,7 +15,7 @@ const sfu = new sfuHelper(sfuOption);
 if(utility.isSpeaker()){
     console.log('speaker mode');
 
-    sfu.startStreaming(utility.createGumOptions(640,480,15))
+    sfu.startStreaming({ video: true, audio: true })
         .then(function(stream){
             const videoDom = $('#video')[0];
             videoDom.srcObject = stream;

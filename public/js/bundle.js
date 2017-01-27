@@ -71,7 +71,7 @@
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
 
-	    sfu.startStreaming(_utility2.default.createGumOptions(640, 480, 15)).then(function (stream) {
+	    sfu.startStreaming({ video: true, audio: true }).then(function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
 	        videoDom.muted = true;

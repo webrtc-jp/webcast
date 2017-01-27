@@ -1,0 +1,25 @@
+{
+  "name": "webcast",
+  "version": "1.0.0",
+  "description": "# how to build",
+  "main": "gulpfile.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "@yusuke84",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-core": "^6.21.0",
+    "babel-loader": "^6.2.10",
+    "babel-preset-es2015": "^6.18.0",
+    "gulp": "^3.9.1",
+    "gulp-if": "^2.0.2",
+    "gulp-sass": "^3.1.0",
+    "gulp-uglify": "^2.0.0",
+    "gulp-watch": "^4.3.11",
+    "gulp-webpack": "^1.5.0",
+    "path": "^0.12.7",
+    "require-dir": "^0.3.1",
+    "webpack": "^1.14.0"
+  }
+}

@@ -19,6 +19,7 @@ if(utility.isSpeaker()){
         .then(function(stream){
             const videoDom = $('#video')[0];
             videoDom.srcObject = stream;
+            videoDom.muted = true;
         })
         .catch(function(reason){
             console.error(reason);

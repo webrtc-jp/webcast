@@ -74,6 +74,7 @@
 	    sfu.startStreaming(_utility2.default.createGumOptions(640, 480, 15)).then(function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
+	        videoDom.muted = true;
 	    }).catch(function (reason) {
 	        console.error(reason);
 	    });

@@ -72,7 +72,7 @@
 
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
-	    sfu.startStreamingForSkyWay({ video: true, audio: true }, function (stream) {
+	    sfu.startStreamingForSkyWay({ video: true, audio: false }, function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
 	        videoDom.muted = true;

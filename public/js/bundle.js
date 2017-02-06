@@ -245,7 +245,7 @@
 	            navigator.mediaDevices.getUserMedia(gUNOptions).then(function (stream) {
 	                // success
 	                var date = new Date();
-	                var skywayUpstream = new Peer('UPSTREAM_' + date.getTime(), { key: self.options.skywayAPIKey, debug: 3 });
+	                var skywayUpstream = new Peer('UPSTREAM_' + date.getTime(), { key: self.options.skywayAPIKey, debug: 1 });
 	                skywayUpstream.on('open', function () {
 	                    var sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: stream });
 	                    sfuRoom.on('open', function () {

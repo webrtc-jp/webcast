@@ -51,7 +51,7 @@ class sfuHelper {
         navigator.mediaDevices.getUserMedia(gUNOptions)
             .then(function (stream) { // success
                 let date = new Date() ;
-                let skywayUpstream = new Peer('UPSTREAM_'+ date.getTime(),{key: self.options.skywayAPIKey,debug: 3});
+                let skywayUpstream = new Peer('UPSTREAM_'+ date.getTime(),{key: self.options.skywayAPIKey,debug: 1});
                 skywayUpstream.on('open', function(){
                     let sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: stream});
                     sfuRoom.on('open', function() {

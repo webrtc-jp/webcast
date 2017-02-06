@@ -72,25 +72,21 @@
 
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
-	    sfu.startStreamingForSkyWay({ video: true, audio: true }).then(function (stream) {
+	    sfu.startStreamingForSkyWay({ video: true, audio: true }, function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
 	        videoDom.muted = true;
-	        console.log(stream);
-	    }).catch(function (reason) {
+	    }, function () {
 	        console.error(reason);
 	    });
 	} else {
-	    (function () {
-	        console.log('viewer mode');
+	    console.log('viewer mode');
+	    sfu.startViewingForSkyWay(function (stream) {
 	        var videoDom = $('#video')[0];
-	        sfu.startViewingForSkyWay().then(function (stream) {
-	            videoDom.srcObject = stream;
-	            console.log(stream);
-	        }).catch(function (reason) {
-	            console.error(reason);
-	        });
-	    })();
+	        videoDom.srcObject = stream;
+	    }, function (reason) {
+	        console.error(reason);
+	    });
 	}
 
 /***/ },
@@ -244,45 +240,56 @@
 	        }
 	    }, {
 	        key: 'startStreamingForSkyWay',
-	        value: function startStreamingForSkyWay(gUNOptions) {
+	        value: function startStreamingForSkyWay(gUNOptions, successCallback, errorCallback) {
 	            var self = this;
-	            return new Promise(function (resolve, reject) {
-	                navigator.mediaDevices.getUserMedia(gUNOptions).then(function (stream) {
-	                    // success
-	                    var date = new Date();
-	                    var skywayUpstream = new Peer('UPSTREAM_' + date.getTime(), { key: self.options.skywayAPIKey, debug: 3 });
-	                    skywayUpstream.on('open', function () {
-	                        var sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: stream });
-	                        sfuRoom.on('open', function () {
-	                            console.log('Broadcast ready.');
-	                            resolve(stream);
-	                        });
-	                        sfuRoom.on('peerJoin', function (peerId) {
-	                            console.log('join the viewer');
-	                        });
+	            navigator.mediaDevices.getUserMedia(gUNOptions).then(function (stream) {
+	                // success
+	                var date = new Date();
+	                var skywayUpstream = new Peer('UPSTREAM_' + date.getTime(), { key: self.options.skywayAPIKey, debug: 3 });
+	                skywayUpstream.on('open', function () {
+	                    var sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: stream });
+	                    sfuRoom.on('open', function () {
+	                        console.log('Broadcast ready.');
+	                        successCallback(stream);
 	                    });
-	                }).catch(function (error) {
-	                    // error
-	                    reject(error);
+	                    sfuRoom.on('peerJoin', function (peerId) {
+	                        console.log('join the viewer');
+	                    });
 	                });
+	            }).catch(function (error) {
+	                // error
+	                errorCallback(error);
 	            });
 	        }
 	    }, {
 	        key: 'startViewingForSkyWay',
-	        value: function startViewingForSkyWay() {
+	        value: function startViewingForSkyWay(successCallback, errorCallback) {
 	            var self = this;
-	            return new Promise(function (resolve, reject) {
-	                var skywayDownstream = new Peer({ key: self.options.skywayAPIKey, debug: 1 });
-	                skywayDownstream.on('open', function () {
-	                    navigator.mediaDevices.getUserMedia(_utility2.default.createGumOptions(1, 1, 1)).then(function (stream) {
-	                        // success
-	                        var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: self._streamMute(stream) });
-	                        console.log('Viewer ready.');
-	                        self._skywayViewingEvents(sfuRoom, resolve);
-	                    }).catch(function (error) {
-	                        // error
-	                        reject(error);
+	            var skywayDownstream = new Peer({ key: self.options.skywayAPIKey, debug: 1 });
+	            skywayDownstream.on('open', function () {
+	                navigator.mediaDevices.getUserMedia(_utility2.default.createGumOptions(1, 1, 1)).then(function (stream) {
+	                    // success
+	                    var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: self._streamMute(stream) });
+	                    console.log('Viewer ready.');
+	                    sfuRoom.on('stream', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('receive stream');
+	                            successCallback(stream);
+	                        }
 	                    });
+	                    sfuRoom.on('removeStream', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('remove');
+	                        }
+	                    });
+	                    sfuRoom.on('close', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('close peer');
+	                        }
+	                    });
+	                }).catch(function (error) {
+	                    // error
+	                    errorCallback(error);
 	                });
 	            });
 	        }
@@ -297,26 +304,6 @@
 	            result.addTrack(tempVideoTrack);
 	            result.addTrack(tempAudioTrack);
 	            return result;
-	        }
-	    }, {
-	        key: '_skywayViewingEvents',
-	        value: function _skywayViewingEvents(sfuRoom, resolve) {
-	            sfuRoom.on('stream', function (stream) {
-	                if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                    console.log('stream');
-	                    resolve(stream);
-	                }
-	            });
-	            sfuRoom.on('removeStream', function (stream) {
-	                if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                    console.log('remove');
-	                }
-	            });
-	            sfuRoom.on('close', function (stream) {
-	                if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                    console.log('close peer');
-	                }
-	            });
 	        }
 	    }]);
 

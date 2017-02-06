@@ -46,43 +46,54 @@ class sfuHelper {
 
     }
 
-    startStreamingForSkyWay(gUNOptions){
+    startStreamingForSkyWay(gUNOptions,successCallback,errorCallback){
         let self = this;
-        return new Promise(function(resolve,reject) {
-            navigator.mediaDevices.getUserMedia(gUNOptions)
-                .then(function (stream) { // success
-                    let date = new Date() ;
-                    let skywayUpstream = new Peer('UPSTREAM_'+ date.getTime(),{key: self.options.skywayAPIKey,debug: 3});
-                    skywayUpstream.on('open', function(){
-                        let sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: stream});
-                        sfuRoom.on('open', function() {
-                            console.log('Broadcast ready.');
-                            resolve(stream);
-                        });
-                        sfuRoom.on('peerJoin', function(peerId) {
-                            console.log('join the viewer');
-                        });
+        navigator.mediaDevices.getUserMedia(gUNOptions)
+            .then(function (stream) { // success
+                let date = new Date() ;
+                let skywayUpstream = new Peer('UPSTREAM_'+ date.getTime(),{key: self.options.skywayAPIKey,debug: 3});
+                skywayUpstream.on('open', function(){
+                    let sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: stream});
+                    sfuRoom.on('open', function() {
+                        console.log('Broadcast ready.');
+                        successCallback(stream);
                     });
-                }).catch(function (error) { // error
-                reject(error);
-            });
+                    sfuRoom.on('peerJoin', function(peerId) {
+                        console.log('join the viewer');
+                    });
+                });
+            }).catch(function (error) { // error
+                errorCallback(error);
         });
 
     }
 
-    startViewingForSkyWay(){
+    startViewingForSkyWay(successCallback,errorCallback){
         let self = this;
-        return new Promise(function(resolve,reject){
-            let skywayDownstream = new Peer({key: self.options.skywayAPIKey,debug: 1});
-            skywayDownstream.on('open', function(){
-                navigator.mediaDevices.getUserMedia(utility.createGumOptions(1,1,1))
-                    .then(function (stream) { // success
-                        let sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: self._streamMute(stream)});
-                        console.log('Viewer ready.');
-                        self._skywayViewingEvents(sfuRoom,resolve);
-                    }).catch(function (error) { // error
-                    reject(error);
-                });
+        let skywayDownstream = new Peer({key: self.options.skywayAPIKey,debug: 1});
+        skywayDownstream.on('open', function(){
+            navigator.mediaDevices.getUserMedia(utility.createGumOptions(1,1,1))
+                .then(function (stream) { // success
+                    let sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: self._streamMute(stream)});
+                    console.log('Viewer ready.');
+                    sfuRoom.on('stream', function(stream) {
+                        if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                            console.log('receive stream');
+                            successCallback(stream);
+                        }
+                    });
+                    sfuRoom.on('removeStream', function(stream) {
+                        if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                            console.log('remove');
+                        }
+                    });
+                    sfuRoom.on('close', function(stream) {
+                        if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                            console.log('close peer');
+                        }
+                    });
+                }).catch(function (error) { // error
+                    errorCallback(error);
             });
         });
 
@@ -97,25 +108,6 @@ class sfuHelper {
         result.addTrack(tempVideoTrack);
         result.addTrack(tempAudioTrack);
         return result;
-    }
-
-    _skywayViewingEvents(sfuRoom,resolve){
-        sfuRoom.on('stream', function(stream) {
-            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                console.log('stream');
-                resolve(stream);
-            }
-        });
-        sfuRoom.on('removeStream', function(stream) {
-            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                console.log('remove');
-            }
-        });
-        sfuRoom.on('close', function(stream) {
-            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                console.log('close peer');
-            }
-        });
     }
 }
 

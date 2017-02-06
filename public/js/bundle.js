@@ -61,29 +61,30 @@
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	var sfuOption = {
-	    provider: 'ANZU',
-	    anzuChannelId: 'BrWeoWi0N',
-	    anzuUpstreamToken: 'PwwjPbRvVo9PxerJy'
+	    provider: 'SKYWAY',
+	    anzuChannelId: '',
+	    anzuUpstreamToken: '',
+	    skywayAPIKey: 'f1507a0e-d2ae-44cb-8fff-2db63fc89e1e',
+	    skywayRoomName: 'skeo3fgvoldp22'
 	};
 
 	var sfu = new _sfuHelper2.default(sfuOption);
 
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
-
-	    sfu.startStreaming({ video: true, audio: true }).then(function (stream) {
+	    sfu.startStreamingForSkyWay({ video: true, audio: true }, function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
 	        videoDom.muted = true;
-	    }).catch(function (reason) {
+	    }, function () {
 	        console.error(reason);
 	    });
 	} else {
 	    console.log('viewer mode');
-	    sfu.startViewing().then(function (stream) {
+	    sfu.startViewingForSkyWay(function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
-	    }).catch(function (reason) {
+	    }, function (reason) {
 	        console.error(reason);
 	    });
 	}
@@ -188,6 +189,12 @@
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+	var _utility = __webpack_require__(1);
+
+	var _utility2 = _interopRequireDefault(_utility);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	var anzu = __webpack_require__(4);
@@ -206,8 +213,8 @@
 	    }
 
 	    _createClass(sfuHelper, [{
-	        key: 'startStreaming',
-	        value: function startStreaming(gUNOptions) {
+	        key: 'startStreamingForAnzu',
+	        value: function startStreamingForAnzu(gUNOptions) {
 	            var self = this;
 	            return new Promise(function (resolve, reject) {
 	                var anzuUpstream = new anzu('upstream');
@@ -219,8 +226,8 @@
 	            });
 	        }
 	    }, {
-	        key: 'startViewing',
-	        value: function startViewing() {
+	        key: 'startViewingForAnzu',
+	        value: function startViewingForAnzu() {
 	            var self = this;
 	            return new Promise(function (resolve, reject) {
 	                var anzuDownstream = new anzu('downstream');
@@ -230,6 +237,73 @@
 	                    reject(error);
 	                });
 	            });
+	        }
+	    }, {
+	        key: 'startStreamingForSkyWay',
+	        value: function startStreamingForSkyWay(gUNOptions, successCallback, errorCallback) {
+	            var self = this;
+	            navigator.mediaDevices.getUserMedia(gUNOptions).then(function (stream) {
+	                // success
+	                var date = new Date();
+	                var skywayUpstream = new Peer('UPSTREAM_' + date.getTime(), { key: self.options.skywayAPIKey, debug: 3 });
+	                skywayUpstream.on('open', function () {
+	                    var sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: stream });
+	                    sfuRoom.on('open', function () {
+	                        console.log('Broadcast ready.');
+	                        successCallback(stream);
+	                    });
+	                    sfuRoom.on('peerJoin', function (peerId) {
+	                        console.log('join the viewer');
+	                    });
+	                });
+	            }).catch(function (error) {
+	                // error
+	                errorCallback(error);
+	            });
+	        }
+	    }, {
+	        key: 'startViewingForSkyWay',
+	        value: function startViewingForSkyWay(successCallback, errorCallback) {
+	            var self = this;
+	            var skywayDownstream = new Peer({ key: self.options.skywayAPIKey, debug: 1 });
+	            skywayDownstream.on('open', function () {
+	                navigator.mediaDevices.getUserMedia(_utility2.default.createGumOptions(1, 1, 1)).then(function (stream) {
+	                    // success
+	                    var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: self._streamMute(stream) });
+	                    console.log('Viewer ready.');
+	                    sfuRoom.on('stream', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('receive stream');
+	                            successCallback(stream);
+	                        }
+	                    });
+	                    sfuRoom.on('removeStream', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('remove');
+	                        }
+	                    });
+	                    sfuRoom.on('close', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('close peer');
+	                        }
+	                    });
+	                }).catch(function (error) {
+	                    // error
+	                    errorCallback(error);
+	                });
+	            });
+	        }
+	    }, {
+	        key: '_streamMute',
+	        value: function _streamMute(stream) {
+	            var tempVideoTrack = stream.getVideoTracks()[0];
+	            var tempAudioTrack = stream.getAudioTracks()[0];
+	            tempVideoTrack.enabled = false;
+	            tempAudioTrack.enabled = false;
+	            var result = new MediaStream();
+	            result.addTrack(tempVideoTrack);
+	            result.addTrack(tempAudioTrack);
+	            return result;
 	        }
 	    }]);
 

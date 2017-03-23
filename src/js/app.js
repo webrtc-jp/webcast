@@ -7,7 +7,7 @@ import sfuHelper from './sfuHelper';
 const sfuOption = {
     provider: 'ANZU',
     anzuChannelId: 'BrWeoWi0N',
-    anzuUpstreamToken: 'PwwjPbRvVo9PxerJy',
+    anzuUpstreamToken: 'hRCnmAjm56P40jyjp',
 };
 
 const sfu = new sfuHelper(sfuOption);

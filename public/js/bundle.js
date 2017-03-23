@@ -63,7 +63,7 @@
 	var sfuOption = {
 	    provider: 'ANZU',
 	    anzuChannelId: 'BrWeoWi0N',
-	    anzuUpstreamToken: 'PwwjPbRvVo9PxerJy'
+	    anzuUpstreamToken: 'hRCnmAjm56P40jyjp'
 	};
 
 	var sfu = new _sfuHelper2.default(sfuOption);

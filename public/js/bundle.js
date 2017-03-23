@@ -61,11 +61,9 @@
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	var sfuOption = {
-	    provider: 'SKYWAY',
-	    anzuChannelId: '',
-	    anzuUpstreamToken: '',
-	    skywayAPIKey: 'f1507a0e-d2ae-44cb-8fff-2db63fc89e1e',
-	    skywayRoomName: 'skeo3fgvoldp22'
+	    provider: 'ANZU',
+	    anzuChannelId: 'BrWeoWi0N',
+	    anzuUpstreamToken: 'PwwjPbRvVo9PxerJy'
 	};
 
 	var sfu = new _sfuHelper2.default(sfuOption);

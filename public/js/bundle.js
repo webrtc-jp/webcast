@@ -70,19 +70,20 @@
 
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
-	    sfu.startStreamingForSkyWay({ video: true, audio: false }, function (stream) {
+
+	    sfu.startStreamingForAnzu({ video: true, audio: true }).then(function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
 	        videoDom.muted = true;
-	    }, function () {
+	    }).catch(function (reason) {
 	        console.error(reason);
 	    });
 	} else {
 	    console.log('viewer mode');
-	    sfu.startViewingForSkyWay(function (stream) {
+	    sfu.startStreamingForAnzu().then(function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
-	    }, function (reason) {
+	    }).catch(function (reason) {
 	        console.error(reason);
 	    });
 	}

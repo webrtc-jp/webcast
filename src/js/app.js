@@ -14,20 +14,26 @@ const sfu = new sfuHelper(sfuOption);
 
 if(utility.isSpeaker()){
     console.log('speaker mode');
-    sfu.startStreamingForSkyWay({video:true,audio:false},function(stream){
-        let videoDom = $('#video')[0];
-        videoDom.srcObject = stream;
-        videoDom.muted = true;
-    },function(){
-        console.error(reason);
-    });
+
+    sfu.startStreamingForAnzu({ video: true, audio: true })
+        .then(function(stream){
+            const videoDom = $('#video')[0];
+            videoDom.srcObject = stream;
+            videoDom.muted = true;
+        })
+        .catch(function(reason){
+            console.error(reason);
+        });
 
 }else{
     console.log('viewer mode');
-    sfu.startViewingForSkyWay(function(stream){
-        let videoDom = $('#video')[0];
-        videoDom.srcObject = stream;
-    },function(reason){
-        console.error(reason);
-    });
+    sfu.startStreamingForAnzu()
+        .then(function(stream){
+            const videoDom = $('#video')[0];
+            videoDom.srcObject = stream;
+        })
+        .catch(function(reason){
+            console.error(reason);
+        });
 }
+

@@ -42,7 +42,7 @@
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
@@ -50,47 +50,227 @@
 
 	var _utility2 = _interopRequireDefault(_utility);
 
-	var _views = __webpack_require__(2);
-
-	var _views2 = _interopRequireDefault(_views);
-
-	var _sfuHelper = __webpack_require__(3);
+	var _sfuHelper = __webpack_require__(2);
 
 	var _sfuHelper2 = _interopRequireDefault(_sfuHelper);
 
+	var _viewController = __webpack_require__(4);
+
+	var _viewController2 = _interopRequireDefault(_viewController);
+
+	var _manager = __webpack_require__(5);
+
+	var _manager2 = _interopRequireDefault(_manager);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	var sfuOption = {
-	    provider: 'ANZU',
+	var managerOptions = {
+
+	    skywayAPIKey: 'eef9d145-a76c-4ab7-8510-f697dadaef11'
+	};
+	var sfuOptions = {
 	    anzuChannelId: 'BrWeoWi0N',
-	    anzuUpstreamToken: 'hRCnmAjm56P40jyjp'
+	    anzuUpstreamToken: 'hRCnmAjm56P40jyjp',
+	    skywayAPIKey: '423c2921-a505-412e-93da-98995c420323',
+	    skywayRoomName: 'skeop2jvvnfe'
 	};
 
-	var sfu = new _sfuHelper2.default(sfuOption);
+	var sfu = new _sfuHelper2.default(sfuOptions);
+
+	var speakerPrefix = 'SPEAKER_';
+
+	var interval = {
+	    updateViewerCounter: 10000,
+	    viewerWaiting: 5000
+	};
+
+	var streamingOptions = {
+	    provider: '',
+	    gUMconstraints: _utility2.default.createGumConstraints(320, 240, 10)
+	};
+
+	var viewOptions = {
+	    mode: ''
+	};
+
+	var peer = void 0;
+
+	var manage = void 0;
+
+	var isAlreadySpeaker = false;
+
+	var updateIntervalObj = void 0;
 
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
 
-	    sfu.startStreamingForAnzu({ video: true, audio: true }).then(function (stream) {
-	        var videoDom = $('#video')[0];
-	        videoDom.srcObject = stream;
-	        videoDom.muted = true;
-	    }).catch(function (reason) {
-	        console.error(reason);
+	    viewOptions.mode = 'speaker';
+	    var view = new _viewController2.default(viewOptions);
+	    view.createView(function (result) {
+	        if (result.status == 'start') {
+	            // 配信を開始する
+	            if (result.selected == 'skyway') {
+	                streamingOptions.provider = 'skyway';
+	            } else if (result.selected == 'anzu') {
+	                streamingOptions.provider = 'anzu';
+	            }
+
+	            // 既にスピーカーが存在するかどうかのチェック
+	            peer = new Peer({ key: managerOptions.skywayAPIKey });
+	            peer.on('open', function () {
+	                peer.listAllPeers(function (list) {
+	                    for (var cnt = 0; cnt < list.length; cnt++) {
+	                        // PeerIDのPrefixで判定
+	                        if (list[cnt].substr(0, 8) == speakerPrefix) {
+	                            console.warn('speaker is already exist');
+	                            isAlreadySpeaker = true;
+	                            break;
+	                        }
+	                    }
+	                    // PeerIDを識別用フラグとして利用しているので一度切断
+	                    peer.destroy();
+	                    // スピーカーが存在しない場合はスピーカーとしてJoinする
+	                    if (!isAlreadySpeaker) {
+	                        var date = new Date();
+	                        peer = new Peer(speakerPrefix + streamingOptions.provider + '_' + date.getTime(), { key: managerOptions.skywayAPIKey });
+	                        peer.on('open', function () {
+	                            // 配信開始
+	                            startStreaming(peer, view);
+	                        });
+	                    } else {
+	                        console.log('配信者がすでにいるため配信できません。ブラウザを閉じて下さい。');
+	                    }
+	                });
+	            });
+	        } else if (result.status == 'stop') {
+	            // 配信を停止する
+	            sfu.stopStreamingViewing(streamingOptions);
+	            peer.destroy();
+	            clearInterval(updateIntervalObj);
+	            view.initIndicator();
+	        }
+	    }, function (error) {
+	        console.error(error);
 	    });
 	} else {
 	    console.log('viewer mode');
-	    sfu.startStreamingForAnzu().then(function (stream) {
+
+	    viewOptions.mode = 'viewer';
+	    var _view = new _viewController2.default(viewOptions);
+	    _view.createView();
+	    peer = new Peer({ key: managerOptions.skywayAPIKey, debug: 1 });
+	    peer.on('open', function () {
+	        // waitingViewer()を呼び出す形に変更したいがまだ動かない
+
+	        var isWaiting = true;
+	        // 配信が開始されるまで待機しされたら接続する
+	        var waitingInterval = setInterval(function () {
+	            peer.listAllPeers(function (list) {
+	                for (var cnt = 0; cnt < list.length; cnt++) {
+	                    // PeerIDのPrefixで判定
+	                    if (list[cnt].substr(0, 8) == speakerPrefix) {
+	                        if (~list[cnt].indexOf('_skyway_')) {
+	                            streamingOptions.provider = 'skyway';
+	                        } else if (~list[cnt].indexOf('_anzu_')) {
+	                            streamingOptions.provider = 'anzu';
+	                        }
+	                        startViewing(peer, _view);
+	                        isWaiting = false;
+	                        break;
+	                    }
+	                }
+	                if (!isWaiting) {
+	                    clearInterval(waitingInterval);
+	                }
+	            });
+	        }, interval.viewerWaiting);
+	    });
+	}
+
+	function startStreaming(p, v) {
+	    sfu.startStreaming(streamingOptions).then(function (stream) {
 	        var videoDom = $('#video')[0];
 	        videoDom.srcObject = stream;
+	        videoDom.muted = true;
+	        // 配信管理機能を初期化
+	        manage = new _manager2.default(p);
+	        updateViewerCounter(v);
 	    }).catch(function (reason) {
 	        console.error(reason);
 	    });
 	}
 
-/***/ },
+	function startViewing(p, v) {
+	    sfu.startViewing(streamingOptions).then(function (stream) {
+	        var videoDom = $('#video')[0];
+	        videoDom.srcObject = stream;
+	        // 配信管理機能を初期化
+	        manage = new _manager2.default(p);
+	        updateViewerCounter(v);
+	    }).catch(function (reason) {
+	        console.error(reason);
+	    });
+	}
+
+	function updateViewerCounter(viewInstance) {
+	    manage.getViewersCount(speakerPrefix).then(function (count, isSpeakerExist) {
+	        if (isSpeakerExist) {
+	            viewInstance.updateIndicatorToBroadcastingMode(count);
+	        } else {
+	            // スピーカーが抜け場合は切断処理
+	            viewInstance.initIndicator();
+	            //sfu.stopStreamingViewing(streamingOptions);
+	            //waitingViewer(viewInstance);
+	        }
+	    }).then(function () {
+	        updateIntervalObj = setInterval(function () {
+	            manage.getViewersCount(speakerPrefix).then(function (count, isSpeakerExist) {
+	                if (isSpeakerExist) {
+	                    viewInstance.updateIndicatorToBroadcastingMode(count);
+	                } else {
+	                    // スピーカーが抜け場合は切断処理
+	                    viewInstance.initIndicator();
+	                    //sfu.stopStreamingViewing(streamingOptions);
+	                    //waitingViewer(viewInstance);
+	                }
+	            }).catch(function (reason) {
+	                console.error(reason);
+	            });
+	        }, interval.updateViewerCounter);
+	    }).catch(function (reason) {
+	        console.error(reason);
+	    });
+	}
+
+	// メモ：配信停止時の視聴者側の処理はまだバグが有って動かない
+	function waitingViewer(viewInstance) {
+	    var isWaiting = true;
+	    // 配信が開始されるまで待機しされたら接続する
+	    var waitingInterval = setInterval(function () {
+	        peer.listAllPeers(function (list) {
+	            for (var cnt = 0; cnt < list.length; cnt++) {
+	                // PeerIDのPrefixで判定
+	                if (list[cnt].substr(0, 8) == speakerPrefix) {
+	                    if (~list[cnt].indexOf('_skyway_')) {
+	                        streamingOptions.provider = 'skyway';
+	                    } else if (~list[cnt].indexOf('_anzu_')) {
+	                        streamingOptions.provider = 'anzu';
+	                    }
+	                    startViewing(peer, viewInstance);
+	                    isWaiting = false;
+	                    break;
+	                }
+	            }
+	            if (!isWaiting) {
+	                clearInterval(waitingInterval);
+	            }
+	        });
+	    }, interval.viewerWaiting);
+	}
+
+/***/ }),
 /* 1 */
-/***/ function(module, exports) {
+/***/ (function(module, exports) {
 
 	'use strict';
 
@@ -130,8 +310,8 @@
 	         */
 
 	    }, {
-	        key: 'createGumOptions',
-	        value: function createGumOptions(width, height, framerate) {
+	        key: 'createGumConstraints',
+	        value: function createGumConstraints(width, height, framerate) {
 
 	            var _param = {
 	                video: {},
@@ -158,27 +338,9 @@
 
 	exports.default = utility;
 
-/***/ },
+/***/ }),
 /* 2 */
-/***/ function(module, exports) {
-
-	'use strict';
-
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	var views = function views() {
-	    _classCallCheck(this, views);
-	};
-
-	exports.default = views;
-
-/***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
@@ -196,40 +358,111 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var anzu = __webpack_require__(4);
+	var anzu = __webpack_require__(3);
 
 	var sfuHelper = function () {
 	    function sfuHelper(param) {
 	        _classCallCheck(this, sfuHelper);
 
-	        var defaultoptions = {
-	            provider: 'ANZU',
-	            anzuChannelId: '',
-	            anzuUpstreamToken: ''
+	        this.options = param;
+	        this.sfuInstatnce = {
+	            skyway: '',
+	            skywayObject: '',
+	            anzu: ''
 	        };
-	        this.options = Object.assign({}, defaultoptions, param);
-	        console.log(this.options);
 	    }
 
 	    _createClass(sfuHelper, [{
-	        key: 'startStreamingForAnzu',
-	        value: function startStreamingForAnzu(gUNOptions) {
+	        key: 'startStreaming',
+	        value: function startStreaming(options) {
+	            var self = this;
+	            return new Promise(function (resolve, reject) {
+	                if (options.provider == 'anzu') {
+	                    self._startStreamingForAnzu(options.gUMconstraints).then(function (stream) {
+	                        resolve(stream);
+	                    }).catch(function (error) {
+	                        reject(error);
+	                    });
+	                } else if (options.provider == 'skyway') {
+	                    self._startStreamingForSkyWay(options.gUMconstraints).then(function (stream) {
+	                        resolve(stream);
+	                    }).catch(function (error) {
+	                        reject(error);
+	                    });
+	                } else {
+	                    reject('unknown provider');
+	                }
+	            });
+	        }
+	    }, {
+	        key: 'stopStreamingViewing',
+	        value: function stopStreamingViewing(options) {
+	            if (options.provider == 'anzu') {
+	                this.sfuInstatnce.anzu.disconnect();
+	                this.sfuInstatnce.anzu = null;
+	            } else if (options.provider == 'skyway') {
+	                this.sfuInstatnce.skywayObject.close();
+	                this.sfuInstatnce.skyway.destroy();
+	            }
+	        }
+	    }, {
+	        key: 'startViewing',
+	        value: function startViewing(options) {
+	            var self = this;
+	            return new Promise(function (resolve, reject) {
+	                if (options.provider == 'anzu') {
+	                    self._startViewingForAnzu().then(function (stream) {
+	                        resolve(stream);
+	                    }).catch(function (error) {
+	                        reject(error);
+	                    });
+	                } else if (options.provider == 'skyway') {
+	                    self._startViewingForSkyWay(options.gUMconstraints).then(function (stream) {
+	                        resolve(stream);
+	                    }).catch(function (error) {
+	                        reject(error);
+	                    });
+	                } else {
+	                    reject('unknown provider');
+	                }
+	            });
+	        }
+	    }, {
+	        key: '_startStreamingForAnzu',
+
+
+	        /**
+	         * Anzuによる配信を開始する
+	         * @param gUNOptions
+	         * @returns {Promise}
+	         * @private
+	         */
+	        value: function _startStreamingForAnzu(gUMconstraints) {
 	            var self = this;
 	            return new Promise(function (resolve, reject) {
 	                var anzuUpstream = new anzu('upstream');
-	                anzuUpstream.start(self.options.anzuChannelId, self.options.anzuUpstreamToken, gUNOptions).then(function (params) {
+	                self.sfuInstatnce.anzu = anzuUpstream;
+	                anzuUpstream.start(self.options.anzuChannelId, self.options.anzuUpstreamToken, gUMconstraints).then(function (params) {
 	                    resolve(params.stream);
 	                }).catch(function (error) {
 	                    reject(error);
 	                });
 	            });
 	        }
+
+	        /**
+	         * Anzuによる視聴を開始する
+	         * @returns {Promise}
+	         * @private
+	         */
+
 	    }, {
-	        key: 'startViewingForAnzu',
-	        value: function startViewingForAnzu() {
+	        key: '_startViewingForAnzu',
+	        value: function _startViewingForAnzu() {
 	            var self = this;
 	            return new Promise(function (resolve, reject) {
 	                var anzuDownstream = new anzu('downstream');
+	                self.sfuInstatnce.anzu = anzuDownstream;
 	                anzuDownstream.start(self.options.anzuChannelId, "").then(function (params) {
 	                    resolve(params.stream);
 	                }).catch(function (error) {
@@ -237,61 +470,97 @@
 	                });
 	            });
 	        }
+
+	        /**
+	         * SkyWay SFUによる配信を開始する
+	         * @param gUNOptions
+	         * @param successCallback
+	         * @param errorCallback
+	         * @private
+	         */
+
 	    }, {
-	        key: 'startStreamingForSkyWay',
-	        value: function startStreamingForSkyWay(gUNOptions, successCallback, errorCallback) {
+	        key: '_startStreamingForSkyWay',
+	        value: function _startStreamingForSkyWay(gUMconstraints) {
 	            var self = this;
-	            navigator.mediaDevices.getUserMedia(gUNOptions).then(function (stream) {
-	                // success
-	                var date = new Date();
-	                var skywayUpstream = new Peer('UPSTREAM_' + date.getTime(), { key: self.options.skywayAPIKey, debug: 1 });
-	                skywayUpstream.on('open', function () {
-	                    var sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: stream });
-	                    sfuRoom.on('open', function () {
-	                        console.log('Broadcast ready.');
-	                        successCallback(stream);
-	                    });
-	                    sfuRoom.on('peerJoin', function (peerId) {
-	                        console.log('join the viewer');
-	                    });
-	                });
-	            }).catch(function (error) {
-	                // error
-	                errorCallback(error);
-	            });
-	        }
-	    }, {
-	        key: 'startViewingForSkyWay',
-	        value: function startViewingForSkyWay(successCallback, errorCallback) {
-	            var self = this;
-	            var skywayDownstream = new Peer({ key: self.options.skywayAPIKey, debug: 1 });
-	            skywayDownstream.on('open', function () {
-	                navigator.mediaDevices.getUserMedia(_utility2.default.createGumOptions(1, 1, 1)).then(function (stream) {
+	            return new Promise(function (resolve, reject) {
+	                navigator.mediaDevices.getUserMedia(gUMconstraints).then(function (stream) {
 	                    // success
-	                    var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: self._streamMute(stream) });
-	                    console.log('Viewer ready.');
-	                    sfuRoom.on('stream', function (stream) {
-	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                            console.log('receive stream');
-	                            successCallback(stream);
-	                        }
-	                    });
-	                    sfuRoom.on('removeStream', function (stream) {
-	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                            console.log('remove');
-	                        }
-	                    });
-	                    sfuRoom.on('close', function (stream) {
-	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                            console.log('close peer');
-	                        }
+	                    var date = new Date();
+	                    var skywayUpstream = new Peer('UPSTREAM_' + date.getTime(), { key: self.options.skywayAPIKey, debug: 1 });
+	                    self.sfuInstatnce.skyway = skywayUpstream;
+	                    skywayUpstream.on('open', function () {
+	                        var sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: stream });
+	                        self.sfuInstatnce.skywayObject = sfuRoom;
+	                        sfuRoom.on('open', function () {
+	                            console.log('Broadcast ready.');
+	                            resolve(stream);
+	                        });
+	                        sfuRoom.on('peerJoin', function (peerId) {
+	                            console.log('join the viewer');
+	                        });
+	                        sfuRoom.on('error', function (error) {
+	                            reject(error);
+	                        });
 	                    });
 	                }).catch(function (error) {
 	                    // error
-	                    errorCallback(error);
+	                    reject(error);
 	                });
 	            });
 	        }
+
+	        /**
+	         * SkyWay SFUによる視聴を開始する
+	         * @param successCallback
+	         * @param errorCallback
+	         * @private
+	         */
+
+	    }, {
+	        key: '_startViewingForSkyWay',
+	        value: function _startViewingForSkyWay() {
+	            var self = this;
+	            return new Promise(function (resolve, reject) {
+	                var skywayDownstream = new Peer({ key: self.options.skywayAPIKey, debug: 1 });
+	                self.sfuInstatnce.skyway = skywayDownstream;
+	                skywayDownstream.on('open', function () {
+	                    navigator.mediaDevices.getUserMedia(_utility2.default.createGumConstraints(1, 1, 1)).then(function (stream) {
+	                        // success
+	                        var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: self._streamMute(stream) });
+	                        self.sfuInstatnce.skywayObject = sfuRoom;
+	                        console.log('Viewer ready.');
+	                        sfuRoom.on('stream', function (stream) {
+	                            if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                                console.log('receive stream');
+	                                resolve(stream);
+	                            }
+	                        });
+	                        sfuRoom.on('removeStream', function (stream) {
+	                            if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                                console.log('remove');
+	                            }
+	                        });
+	                        sfuRoom.on('close', function (stream) {
+	                            if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                                console.log('close peer');
+	                            }
+	                        });
+	                        sfuRoom.on('error', function (error) {
+	                            reject(error);
+	                        });
+	                    }).catch(function (error) {
+	                        // error
+	                        reject(error);
+	                    });
+	                });
+	            });
+	        }
+
+	        /**
+	         * @private _streamMute
+	         */
+
 	    }, {
 	        key: '_streamMute',
 	        value: function _streamMute(stream) {
@@ -311,9 +580,9 @@
 
 	exports.default = sfuHelper;
 
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;var require;var require;/* WEBPACK VAR INJECTION */(function(global) {"use strict";
 
@@ -787,5 +1056,179 @@
 	});
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
-/***/ }
+/***/ }),
+/* 4 */
+/***/ (function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var viewController = function () {
+	    function viewController(param) {
+	        _classCallCheck(this, viewController);
+
+	        this.options = param;
+	        this.status = {
+	            isSkyWayBroadcasting: false,
+	            isAnzuBroadcasting: false,
+	            isRecording: false
+	        };
+	    }
+
+	    _createClass(viewController, [{
+	        key: 'createView',
+	        value: function createView(onClickCb, errorCb) {
+	            var self = this;
+	            var result = {
+	                selected: '',
+	                status: ''
+	            };
+	            if (self.options.mode == 'speaker') {
+	                $('#skyway-broadcast').show();
+	                $('#anzu-broadcast').show();
+	                $('#skyway-broadcast').click(function () {
+	                    result.selected = 'skyway';
+	                    if (!self.status.isSkyWayBroadcasting) {
+	                        $('#anzu-broadcast').prop("disabled", true);
+	                        $('#skyway-broadcast').text('配信を停止');
+	                        $('#skyway-broadcast').addClass('btn-warning');
+	                        self.status.isSkyWayBroadcasting = true;
+	                        result.status = 'start';
+	                        onClickCb(result);
+	                    } else {
+	                        $('#anzu-broadcast').prop("disabled", false);
+	                        $('#skyway-broadcast').text('SkyWayで配信');
+	                        $('#skyway-broadcast').removeClass('btn-warning');
+	                        self.status.isSkyWayBroadcasting = false;
+	                        result.status = 'stop';
+	                        onClickCb(result);
+	                    }
+	                });
+	                $('#anzu-broadcast').click(function () {
+	                    result.selected = 'anzu';
+	                    if (!self.status.isAnzuBroadcasting) {
+	                        $('#skyway-broadcast').prop("disabled", true);
+	                        $('#anzu-broadcast').text('配信を停止');
+	                        $('#anzu-broadcast').addClass('btn-warning');
+	                        self.status.isAnzuBroadcasting = true;
+	                        result.status = 'start';
+	                        onClickCb(result);
+	                    } else {
+	                        $('#skyway-broadcast').prop("disabled", false);
+	                        $('#anzu-broadcast').text('Anzuで配信');
+	                        $('#anzu-broadcast').removeClass('btn-warning');
+	                        self.status.isAnzuBroadcasting = false;
+	                        result.status = 'stop';
+	                        onClickCb(result);
+	                    }
+	                });
+
+	                $('#indicators').html('配信者モードで起動中<BR>配信に使用するSFUを選択して下さい');
+	            } else if (self.options.mode == 'viewer') {
+	                $('#recording').show();
+	                $('#recording').click(function () {
+	                    self.status.isRecording = true;
+	                    onClickCb('recording');
+	                });
+
+	                $('#indicators').html('視聴者モードで起動中<BR>配信が開始させるまでお待ち下さい');
+	            } else {
+	                errorCb('unknown view mode');
+	            }
+	        }
+	    }, {
+	        key: 'updateIndicatorToBroadcastingMode',
+	        value: function updateIndicatorToBroadcastingMode(count) {
+	            var indicators_text = '';
+	            if (this.options.mode == 'speaker') {
+	                if (this.status.isSkyWayBroadcasting) {
+	                    indicators_text = '<span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span> SkyWayで配信中 / ' + '視聴者数: ' + count + '</span>';
+	                } else if (this.status.isAnzuBroadcasting) {
+	                    indicators_text = '<span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span> Anzuで配信中 / ' + '視聴者数: ' + count + '</span>';
+	                }
+	            } else if (this.options.mode == 'viewer') {
+	                indicators_text = '<span class="glyphicon glyphicon-play" aria-hidden="true"></span> 視聴中 / ' + '視聴者数: ' + count + '</span>';
+	            }
+
+	            $('#indicators').html(indicators_text);
+	        }
+	    }, {
+	        key: 'initIndicator',
+	        value: function initIndicator() {
+	            var indicators_text = '';
+	            if (this.options.mode == 'speaker') {
+	                indicators_text = '配信者モードで起動中<BR>配信に使用するSFUを選択して下さい';
+	            } else {
+	                indicators_text = '視聴者モードで起動中<BR>配信が開始させるまでお待ち下さい';
+	            }
+
+	            $('#indicators').html(indicators_text);
+	        }
+	    }]);
+
+	    return viewController;
+	}();
+
+	exports.default = viewController;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var manager = function () {
+	    function manager(peer) {
+	        _classCallCheck(this, manager);
+
+	        this.peer = peer;
+	    }
+
+	    /**
+	     * 視聴者の数をカウントする
+	     */
+
+
+	    _createClass(manager, [{
+	        key: 'getViewersCount',
+	        value: function getViewersCount(speakerPrefix) {
+	            var self = this;
+	            return new Promise(function (resolve, reject) {
+	                self.peer.listAllPeers(function (list) {
+	                    var isSpeakerExist = false;
+	                    for (var cnt = 0; cnt < list.length; cnt++) {
+	                        // PeerIDのPrefixで判定
+	                        if (list[cnt].substr(0, 8) == speakerPrefix) {
+	                            isSpeakerExist = true;
+	                            break;
+	                        }
+	                    }
+	                    // 配信者分は除きカウントする
+	                    resolve(list.length - 1, isSpeakerExist);
+	                });
+	            });
+	        }
+	    }]);
+
+	    return manager;
+	}();
+
+	exports.default = manager;
+
+/***/ })
 /******/ ]);

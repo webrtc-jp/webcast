@@ -6,21 +6,87 @@ const anzu = require('./libs/anzu.js');
 class sfuHelper {
 
     constructor(param) {
-
-        const defaultoptions = {
-            provider: 'ANZU',
-            anzuChannelId: '',
-            anzuUpstreamToken: '',
-        };
-        this.options = Object.assign({},defaultoptions,param);
-        console.log(this.options);
-
+        this.options = param;
+        this.sfuInstatnce = {
+            skyway: '',
+            skywayObject: '',
+            anzu: ''
+        }
     }
-    startStreamingForAnzu(gUNOptions){
-        let self = this;
+
+    startStreaming(options){
+        const self = this;
         return new Promise(function(resolve,reject){
-            var anzuUpstream = new anzu('upstream');
-            anzuUpstream.start(self.options.anzuChannelId,self.options.anzuUpstreamToken, gUNOptions)
+            if(options.provider == 'anzu'){
+                self._startStreamingForAnzu(options.gUMconstraints)
+                    .then(function(stream) {
+                        resolve(stream);
+                    })
+                    .catch(function(error) {
+                        reject(error);
+                    })
+            }else if(options.provider == 'skyway'){
+                self._startStreamingForSkyWay(options.gUMconstraints)
+                    .then(function(stream) {
+                        resolve(stream)
+                    })
+                    .catch(function(error) {
+                        reject(error)
+                    })
+            }else {
+                reject('unknown provider');
+            }
+        });
+
+    };
+
+    stopStreamingViewing(options){
+        if(options.provider == 'anzu'){
+            this.sfuInstatnce.anzu.disconnect();
+            this.sfuInstatnce.anzu = null;
+        }else if(options.provider == 'skyway'){
+            this.sfuInstatnce.skywayObject.close();
+            this.sfuInstatnce.skyway.destroy();
+        }
+    };
+
+    startViewing(options){
+        const self = this;
+        return new Promise(function(resolve,reject){
+            if(options.provider == 'anzu'){
+                self._startViewingForAnzu()
+                    .then(function(stream) {
+                        resolve(stream);
+                    })
+                    .catch(function(error) {
+                        reject(error);
+                    })
+            }else if(options.provider == 'skyway'){
+                self._startViewingForSkyWay(options.gUMconstraints)
+                    .then(function(stream) {
+                        resolve(stream)
+                    })
+                    .catch(function(error) {
+                        reject(error)
+                    })
+            }else {
+                reject('unknown provider');
+            }
+        });
+    };
+
+    /**
+     * Anzuによる配信を開始する
+     * @param gUNOptions
+     * @returns {Promise}
+     * @private
+     */
+    _startStreamingForAnzu(gUMconstraints){
+        const self = this;
+        return new Promise(function(resolve,reject){
+            const anzuUpstream = new anzu('upstream');
+            self.sfuInstatnce.anzu = anzuUpstream;
+            anzuUpstream.start(self.options.anzuChannelId,self.options.anzuUpstreamToken, gUMconstraints)
                 .then(function(params) {
                     resolve(params.stream);
                 })
@@ -31,10 +97,16 @@ class sfuHelper {
 
     }
 
-    startViewingForAnzu(){
-        let self = this;
+    /**
+     * Anzuによる視聴を開始する
+     * @returns {Promise}
+     * @private
+     */
+    _startViewingForAnzu(){
+        const self = this;
         return new Promise(function(resolve,reject){
-            var anzuDownstream = new anzu('downstream');
+            const anzuDownstream = new anzu('downstream');
+            self.sfuInstatnce.anzu = anzuDownstream;
             anzuDownstream.start(self.options.anzuChannelId, "")
                 .then(function(params) {
                     resolve(params.stream);
@@ -46,59 +118,89 @@ class sfuHelper {
 
     }
 
-    startStreamingForSkyWay(gUNOptions,successCallback,errorCallback){
-        let self = this;
-        navigator.mediaDevices.getUserMedia(gUNOptions)
-            .then(function (stream) { // success
-                let date = new Date() ;
-                let skywayUpstream = new Peer('UPSTREAM_'+ date.getTime(),{key: self.options.skywayAPIKey,debug: 1});
-                skywayUpstream.on('open', function(){
-                    let sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: stream});
-                    sfuRoom.on('open', function() {
-                        console.log('Broadcast ready.');
-                        successCallback(stream);
+    /**
+     * SkyWay SFUによる配信を開始する
+     * @param gUNOptions
+     * @param successCallback
+     * @param errorCallback
+     * @private
+     */
+    _startStreamingForSkyWay(gUMconstraints){
+        const self = this;
+        return new Promise(function(resolve,reject){
+            navigator.mediaDevices.getUserMedia(gUMconstraints)
+                .then(function (stream) { // success
+                    const date = new Date() ;
+                    const skywayUpstream = new Peer('UPSTREAM_'+ date.getTime(),{key: self.options.skywayAPIKey,debug: 1});
+                    self.sfuInstatnce.skyway = skywayUpstream;
+                    skywayUpstream.on('open', function(){
+                        let sfuRoom = skywayUpstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: stream});
+                        self.sfuInstatnce.skywayObject = sfuRoom;
+                        sfuRoom.on('open', function() {
+                            console.log('Broadcast ready.');
+                            resolve(stream);
+                        });
+                        sfuRoom.on('peerJoin', function(peerId) {
+                            console.log('join the viewer');
+                        });
+                        sfuRoom.on('error', function (error) {
+                            reject(error);
+                        });
                     });
-                    sfuRoom.on('peerJoin', function(peerId) {
-                        console.log('join the viewer');
-                    });
+                })
+                .catch(function (error) { // error
+                    reject(error);
                 });
-            }).catch(function (error) { // error
-                errorCallback(error);
         });
-
     }
 
-    startViewingForSkyWay(successCallback,errorCallback){
-        let self = this;
-        let skywayDownstream = new Peer({key: self.options.skywayAPIKey,debug: 1});
-        skywayDownstream.on('open', function(){
-            navigator.mediaDevices.getUserMedia(utility.createGumOptions(1,1,1))
-                .then(function (stream) { // success
-                    let sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: self._streamMute(stream)});
-                    console.log('Viewer ready.');
-                    sfuRoom.on('stream', function(stream) {
-                        if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                            console.log('receive stream');
-                            successCallback(stream);
-                        }
-                    });
-                    sfuRoom.on('removeStream', function(stream) {
-                        if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                            console.log('remove');
-                        }
-                    });
-                    sfuRoom.on('close', function(stream) {
-                        if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                            console.log('close peer');
-                        }
-                    });
-                }).catch(function (error) { // error
-                    errorCallback(error);
+    /**
+     * SkyWay SFUによる視聴を開始する
+     * @param successCallback
+     * @param errorCallback
+     * @private
+     */
+    _startViewingForSkyWay(){
+        const self = this;
+        return new Promise(function(resolve,reject){
+            const skywayDownstream = new Peer({key: self.options.skywayAPIKey,debug: 1});
+            self.sfuInstatnce.skyway = skywayDownstream;
+            skywayDownstream.on('open', function(){
+                navigator.mediaDevices.getUserMedia(utility.createGumConstraints(1,1,1))
+                    .then(function (stream) { // success
+                        const sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: self._streamMute(stream)});
+                        self.sfuInstatnce.skywayObject = sfuRoom;
+                        console.log('Viewer ready.');
+                        sfuRoom.on('stream', function(stream) {
+                            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                                console.log('receive stream');
+                                resolve(stream);
+                            }
+                        });
+                        sfuRoom.on('removeStream', function(stream) {
+                            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                                console.log('remove');
+                            }
+                        });
+                        sfuRoom.on('close', function(stream) {
+                            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                                console.log('close peer');
+                            }
+                        });
+                        sfuRoom.on('error', function (error) {
+                            reject(error);
+                        });
+                    }).catch(function (error) { // error
+                    reject(error);
+                });
             });
         });
 
     }
 
+    /**
+     * @private _streamMute
+     */
     _streamMute(stream){
         let tempVideoTrack = stream.getVideoTracks()[0];
         let tempAudioTrack = stream.getAudioTracks()[0];

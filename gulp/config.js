@@ -46,14 +46,6 @@ module.exports = {
         }
     },
 
-    // copyの設定
-    copy: {
-        src: [
-            src + '/www/**'
-        ],
-        dest: dest
-    },
-
     watch: {
         js: relativeSrcPath + '/js/**',
         sass: relativeSrcPath + '/style/**',

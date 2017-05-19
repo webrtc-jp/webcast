@@ -12,9 +12,4 @@ gulp.task('watch', function () {
     watch(config.sass, function () {
         gulp.start(['sass']);
     });
-
-    // www
-    watch(config.www, function () {
-        gulp.start(['copy']);
-    });
 });

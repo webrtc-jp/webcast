@@ -20,7 +20,7 @@ class utility {
      * @param framerate
      * @returns {*}
      */
-    static createGumOptions(width,height,framerate) {
+    static createGumConstraints(width,height,framerate) {
 
         let _param = {
             video: {},

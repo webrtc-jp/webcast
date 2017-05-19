@@ -4,7 +4,8 @@
   "description": "# how to build",
   "main": "gulpfile.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "gulp watch"
   },
   "author": "@yusuke84",
   "license": "MIT",
@@ -20,6 +21,6 @@
     "gulp-webpack": "^1.5.0",
     "path": "^0.12.7",
     "require-dir": "^0.3.1",
-    "webpack": "^1.14.0"
+    "webpack": "^2.5.1"
   }
 }

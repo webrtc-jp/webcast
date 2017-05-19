@@ -11,11 +11,84 @@ body {
   padding: 0;
   background: #000000;
 }
+
 #video {
   width: 100%;
   height: 100%;
-  position: absolute;
+  position: static;
+  padding: 10px;
+  border-radius: 50px;
   left: 0;
   top: 0;
   z-index: 1;
+}
+
+.left-view {
+  position: static;
+}
+
+.right-view {
+  position: static;
+}
+
+.chat-box {
+  height: auto;
+  overflow: hidden; /*floatの解除*/
+  margin: 10px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.chat-face {
+  float: left;
+  margin-right: -120px;
+}
+.chat-area {
+  width: 100%;
+  float: right;
+}
+.chat-hukidashi {
+  display: inline-block; /*コメントの文字数に合わせて可変*/
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  margin-right: 10px;
+  border-radius: 10px;
+  position: relative; /*追記*/
+  background-color: #D9F0FF; /*追記*/
+  font-size: 14px;
+}
+
+.input-group {
+  margin: 10px;
+}
+
+.panel {
+  margin: 10px;
+}
+
+.panel-button {
+  margin: 10px;
+  width: 100%;
+}
+
+#skyway-broadcast {
+  display: none;
+  width: 150px;
+}
+#anzu-broadcast {
+  display: none;
+  width: 150px;
+}
+#recording {
+  display: none;
+}
+
+#indicators {
+  position: absolute;
+  left: 50px;
+  top: 30px;
+  font-size: 21px;
+  color: white;
+  text-shadow: 0 0 2px black, 0 0 2px black;
+  font-family: 'Share Tech Mono', Menlo, Monaco, Consolas, "Courier New", monospace;
 }

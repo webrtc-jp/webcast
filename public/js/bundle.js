@@ -213,25 +213,23 @@
 	}
 
 	function updateViewerCounter(viewInstance) {
-	    manage.getViewersCount(speakerPrefix).then(function (count, isSpeakerExist) {
-	        if (isSpeakerExist) {
-	            viewInstance.updateIndicatorToBroadcastingMode(count);
-	        } else {
+	    manage.getViewersCount(speakerPrefix).then(function (result) {
+	        viewInstance.updateIndicatorToBroadcastingMode(result.count);
+	        if (result.isSpeakerExist) {} else {
 	            // スピーカーが抜け場合は切断処理
 	            viewInstance.initIndicator();
-	            //sfu.stopStreamingViewing(streamingOptions);
-	            //waitingViewer(viewInstance);
+	            sfu.stopStreamingViewing(streamingOptions);
+	            waitingViewer(viewInstance);
 	        }
 	    }).then(function () {
 	        updateIntervalObj = setInterval(function () {
-	            manage.getViewersCount(speakerPrefix).then(function (count, isSpeakerExist) {
-	                if (isSpeakerExist) {
-	                    viewInstance.updateIndicatorToBroadcastingMode(count);
-	                } else {
+	            manage.getViewersCount(speakerPrefix).then(function (result) {
+	                viewInstance.updateIndicatorToBroadcastingMode(result.count);
+	                if (result.isSpeakerExist) {} else {
 	                    // スピーカーが抜け場合は切断処理
 	                    viewInstance.initIndicator();
-	                    //sfu.stopStreamingViewing(streamingOptions);
-	                    //waitingViewer(viewInstance);
+	                    sfu.stopStreamingViewing(streamingOptions);
+	                    waitingViewer(viewInstance);
 	                }
 	            }).catch(function (reason) {
 	                console.error(reason);
@@ -399,7 +397,6 @@
 	        value: function stopStreamingViewing(options) {
 	            if (options.provider == 'anzu') {
 	                this.sfuInstatnce.anzu.disconnect();
-	                this.sfuInstatnce.anzu = null;
 	            } else if (options.provider == 'skyway') {
 	                this.sfuInstatnce.skywayObject.close();
 	                this.sfuInstatnce.skyway.destroy();
@@ -541,10 +538,8 @@
 	                                console.log('remove');
 	                            }
 	                        });
-	                        sfuRoom.on('close', function (stream) {
-	                            if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                                console.log('close peer');
-	                            }
+	                        sfuRoom.on('close', function () {
+	                            console.log('close peer');
 	                        });
 	                        sfuRoom.on('error', function (error) {
 	                            reject(error);
@@ -1219,7 +1214,7 @@
 	                        }
 	                    }
 	                    // 配信者分は除きカウントする
-	                    resolve(list.length - 1, isSpeakerExist);
+	                    resolve({ count: list.length - 1, isSpeakerExist: isSpeakerExist });
 	                });
 	            });
 	        }

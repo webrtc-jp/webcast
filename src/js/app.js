@@ -159,27 +159,27 @@ function startViewing(p,v){
 
 function updateViewerCounter(viewInstance){
     manage.getViewersCount(speakerPrefix)
-        .then(function(count,isSpeakerExist){
-            if(isSpeakerExist){
-                viewInstance.updateIndicatorToBroadcastingMode(count)
+        .then(function(result){
+            viewInstance.updateIndicatorToBroadcastingMode(result.count);
+            if(result.isSpeakerExist){
             }else{
                 // スピーカーが抜け場合は切断処理
                 viewInstance.initIndicator();
-                //sfu.stopStreamingViewing(streamingOptions);
-                //waitingViewer(viewInstance);
+                sfu.stopStreamingViewing(streamingOptions);
+                waitingViewer(viewInstance);
             }
         })
         .then(function(){
             updateIntervalObj = setInterval(function() {
                 manage.getViewersCount(speakerPrefix)
-                    .then(function(count,isSpeakerExist){
-                        if(isSpeakerExist){
-                            viewInstance.updateIndicatorToBroadcastingMode(count)
+                    .then(function(result){
+                        viewInstance.updateIndicatorToBroadcastingMode(result.count);
+                        if(result.isSpeakerExist){
                         }else{
                             // スピーカーが抜け場合は切断処理
                             viewInstance.initIndicator();
-                            //sfu.stopStreamingViewing(streamingOptions);
-                            //waitingViewer(viewInstance);
+                            sfu.stopStreamingViewing(streamingOptions);
+                            waitingViewer(viewInstance);
                         }
                     })
                     .catch(function(reason){

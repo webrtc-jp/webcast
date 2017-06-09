@@ -22,7 +22,7 @@ class manager {
                     }
                 }
                 // 配信者分は除きカウントする
-                resolve(list.length - 1,isSpeakerExist);
+                resolve({count:list.length - 1,isSpeakerExist: isSpeakerExist});
             });
         });
     }

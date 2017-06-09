@@ -43,7 +43,6 @@ class sfuHelper {
     stopStreamingViewing(options){
         if(options.provider == 'anzu'){
             this.sfuInstatnce.anzu.disconnect();
-            this.sfuInstatnce.anzu = null;
         }else if(options.provider == 'skyway'){
             this.sfuInstatnce.skywayObject.close();
             this.sfuInstatnce.skyway.destroy();
@@ -182,10 +181,8 @@ class sfuHelper {
                                 console.log('remove');
                             }
                         });
-                        sfuRoom.on('close', function(stream) {
-                            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                                console.log('close peer');
-                            }
+                        sfuRoom.on('close', function() {
+                            console.log('close peer');
                         });
                         sfuRoom.on('error', function (error) {
                             reject(error);

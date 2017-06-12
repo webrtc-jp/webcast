@@ -10,9 +10,9 @@ const managerOptions = {
 };
 const sfuOptions = {
     anzuChannelId: 'BrWeoWi0N',
-    anzuUpstreamToken: 'hRCnmAjm56P40jyjp',
+    anzuUpstreamToken: 'Yg5egXA6Pg1GspEPK',
     skywayAPIKey: '423c2921-a505-412e-93da-98995c420323',
-    skywayRoomName: 'skeop2jvvnfe'
+    skywayRoomName: 'skeop2jvrnfesw1'
 };
 
 const sfu = new sfuHelper(sfuOptions);

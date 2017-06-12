@@ -103,3 +103,7 @@ body {
   text-shadow: 0 0 2px black, 0 0 2px black;
   font-family: 'Share Tech Mono', Menlo, Monaco, Consolas, "Courier New", monospace;
 }
+
+#controlpanel {
+  display: none;
+}

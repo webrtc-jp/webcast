@@ -18,6 +18,7 @@ class viewController {
             status: ''
         };
         if(self.options.mode == 'speaker'){
+            $('#controlpanel').show();
             $('#skyway-broadcast').show();
             $('#anzu-broadcast').show();
             $('#skyway-broadcast').click(function(){

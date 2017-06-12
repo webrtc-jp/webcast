@@ -65,7 +65,6 @@
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	var managerOptions = {
-
 	    skywayAPIKey: 'eef9d145-a76c-4ab7-8510-f697dadaef11'
 	};
 	var sfuOptions = {
@@ -86,7 +85,11 @@
 
 	var streamingOptions = {
 	    provider: '',
-	    gUMconstraints: _utility2.default.createGumConstraints(320, 240, 10)
+	    //gUMconstraints: utility.createGumConstraints(320,240,10
+	    gUMconstraints: {
+	        video: true,
+	        audio: true
+	    }
 	};
 
 	var viewOptions = {
@@ -1086,6 +1089,7 @@
 	                status: ''
 	            };
 	            if (self.options.mode == 'speaker') {
+	                $('#controlpanel').show();
 	                $('#skyway-broadcast').show();
 	                $('#anzu-broadcast').show();
 	                $('#skyway-broadcast').click(function () {

@@ -6,7 +6,6 @@ import viewController from './viewController';
 import manager from './manager';
 
 const managerOptions = {
-
     skywayAPIKey: 'eef9d145-a76c-4ab7-8510-f697dadaef11',
 };
 const sfuOptions = {
@@ -27,7 +26,11 @@ const interval = {
 
 let streamingOptions = {
     provider: '',
-    gUMconstraints: utility.createGumConstraints(320,240,10)
+    //gUMconstraints: utility.createGumConstraints(320,240,10
+    gUMconstraints: {
+        video: true,
+        audio: true
+    }
 };
 
 let viewOptions = {

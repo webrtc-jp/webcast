@@ -10,9 +10,9 @@ const managerOptions = {
 };
 const sfuOptions = {
     anzuChannelId: 'BrWeoWi0N',
-    anzuUpstreamToken: 'Yg5egXA6Pg1GspEPK',
+    anzuUpstreamToken: 'gwCF7fXsGRUofYC8Z',
     skywayAPIKey: '423c2921-a505-412e-93da-98995c420323',
-    skywayRoomName: 'skeop2jvrnfesw1'
+    skywayRoomName: 'skeop2jvrnfesw2'
 };
 
 const sfu = new sfuHelper(sfuOptions);
@@ -26,11 +26,7 @@ const interval = {
 
 let streamingOptions = {
     provider: '',
-    //gUMconstraints: utility.createGumConstraints(320,240,10
-    gUMconstraints: {
-        video: true,
-        audio: true
-    }
+    gUMconstraints: utility.createGumConstraints(1920,1080,29),
 };
 
 let viewOptions = {

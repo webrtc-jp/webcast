@@ -85,7 +85,11 @@
 
 	var streamingOptions = {
 	    provider: '',
-	    gUMconstraints: _utility2.default.createGumConstraints(1920, 1080, 29)
+	    //gUMconstraints: utility.createGumConstraints(1920,1080,29),
+	    gUMconstraints: {
+	        video: true,
+	        audio: true
+	    }
 	};
 
 	var viewOptions = {

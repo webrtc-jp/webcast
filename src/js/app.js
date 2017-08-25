@@ -26,7 +26,11 @@ const interval = {
 
 let streamingOptions = {
     provider: '',
-    gUMconstraints: utility.createGumConstraints(1920,1080,29),
+    //gUMconstraints: utility.createGumConstraints(1920,1080,29),
+    gUMconstraints: {
+        video: true,
+        audio: true
+    }
 };
 
 let viewOptions = {

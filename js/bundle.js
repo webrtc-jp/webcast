@@ -99,8 +99,8 @@
 
 	var peer = void 0;
 	var manage = void 0;
-	var isAlreadySpeaker = false;
 	var updateIntervalObj = void 0;
+	var isAlreadySpeaker = false;
 	var isWaiting = true;
 
 	if (!_utility2.default.usingChrome()) {

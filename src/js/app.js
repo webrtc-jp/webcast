@@ -40,8 +40,8 @@ let viewOptions = {
 
 let peer;
 let manage;
-let isAlreadySpeaker = false;
 let updateIntervalObj;
+let isAlreadySpeaker = false;
 let isWaiting = true;
 
 if(!utility.usingChrome()){

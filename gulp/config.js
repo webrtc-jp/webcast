@@ -1,4 +1,4 @@
-var dest = './public'; // 出力先ディレクトリ
+var dest = './'; // 出力先ディレクトリ
 var src = './src';  // ソースディレクトリ
 var path = require('path');
 var relativeSrcPath = path.relative('.', src);  // パス整形

@@ -64,23 +64,24 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+	var speakerPrefix = 'SPEAKER_';
+	var dummyPrefix = 'DUMMY_';
 	var managerOptions = {
-	    skywayAPIKey: 'eef9d145-a76c-4ab7-8510-f697dadaef11'
+	    skywayAPIKey: 'a134f02c-4b4f-4e4b-a742-3ac45dc3a384'
 	};
 	var sfuOptions = {
 	    anzuChannelId: 'BrWeoWi0N',
 	    anzuUpstreamToken: 'gwCF7fXsGRUofYC8Z',
-	    skywayAPIKey: '423c2921-a505-412e-93da-98995c420323',
-	    skywayRoomName: 'skeop2jvrnfesw2'
+	    skywayAPIKey: 'd707b39d-e658-44ea-bf10-1ea26ef737fd',
+	    skywayRoomName: 'skeop2jvrnfesw2',
+	    dummyPrefix: dummyPrefix
 	};
 
 	var sfu = new _sfuHelper2.default(sfuOptions);
 
-	var speakerPrefix = 'SPEAKER_';
-
 	var interval = {
-	    updateViewerCounter: 10000,
-	    viewerWaiting: 5000
+	    updateViewerCounter: 5000,
+	    viewerWaiting: 3000
 	};
 
 	var streamingOptions = {
@@ -97,12 +98,15 @@
 	};
 
 	var peer = void 0;
-
 	var manage = void 0;
-
 	var isAlreadySpeaker = false;
-
 	var updateIntervalObj = void 0;
+	var isWaiting = true;
+
+	if (!_utility2.default.usingChrome()) {
+	    alert('このサービスはGoogle Chrome専用です。');
+	    window.location.href = 'https://www.google.com/intl/ja_ALL/chrome/';
+	}
 
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
@@ -148,7 +152,9 @@
 	        } else if (result.status == 'stop') {
 	            // 配信を停止する
 	            sfu.stopStreamingViewing(streamingOptions);
+	            // 管理用Roomから切断
 	            peer.destroy();
+
 	            clearInterval(updateIntervalObj);
 	            view.initIndicator();
 	        }
@@ -165,28 +171,30 @@
 	    peer.on('open', function () {
 	        // waitingViewer()を呼び出す形に変更したいがまだ動かない
 
-	        var isWaiting = true;
+	        if (isWaiting) waitingViewer(_view);
+	        /*
 	        // 配信が開始されるまで待機しされたら接続する
-	        var waitingInterval = setInterval(function () {
+	        const waitingInterval = setInterval(function(){
 	            peer.listAllPeers(function (list) {
 	                for (var cnt = 0; cnt < list.length; cnt++) {
 	                    // PeerIDのPrefixで判定
 	                    if (list[cnt].substr(0, 8) == speakerPrefix) {
-	                        if (~list[cnt].indexOf('_skyway_')) {
+	                        if(~list[cnt].indexOf('_skyway_')){
 	                            streamingOptions.provider = 'skyway';
-	                        } else if (~list[cnt].indexOf('_anzu_')) {
+	                        }else if(~list[cnt].indexOf('_anzu_')){
 	                            streamingOptions.provider = 'anzu';
 	                        }
-	                        startViewing(peer, _view);
+	                        startViewing(peer,view);
 	                        isWaiting = false;
+	                        clearInterval(waitingInterval);
 	                        break;
 	                    }
 	                }
-	                if (!isWaiting) {
+	                if(!isWaiting){
 	                    clearInterval(waitingInterval);
 	                }
 	            });
-	        }, interval.viewerWaiting);
+	        },interval.viewerWaiting);*/
 	    });
 	}
 
@@ -216,23 +224,23 @@
 	}
 
 	function updateViewerCounter(viewInstance) {
-	    manage.getViewersCount(speakerPrefix).then(function (result) {
+	    manage.getViewersCount(speakerPrefix, dummyPrefix).then(function (result) {
 	        viewInstance.updateIndicatorToBroadcastingMode(result.count);
 	        if (result.isSpeakerExist) {} else {
 	            // スピーカーが抜け場合は切断処理
 	            viewInstance.initIndicator();
 	            sfu.stopStreamingViewing(streamingOptions);
-	            waitingViewer(viewInstance);
+	            if (!isWaiting) waitingViewer(viewInstance);
 	        }
 	    }).then(function () {
 	        updateIntervalObj = setInterval(function () {
-	            manage.getViewersCount(speakerPrefix).then(function (result) {
+	            manage.getViewersCount(speakerPrefix, dummyPrefix).then(function (result) {
 	                viewInstance.updateIndicatorToBroadcastingMode(result.count);
 	                if (result.isSpeakerExist) {} else {
 	                    // スピーカーが抜け場合は切断処理
 	                    viewInstance.initIndicator();
 	                    sfu.stopStreamingViewing(streamingOptions);
-	                    waitingViewer(viewInstance);
+	                    if (!isWaiting) waitingViewer(viewInstance);
 	                }
 	            }).catch(function (reason) {
 	                console.error(reason);
@@ -243,15 +251,14 @@
 	    });
 	}
 
-	// メモ：配信停止時の視聴者側の処理はまだバグが有って動かない
 	function waitingViewer(viewInstance) {
-	    var isWaiting = true;
+	    isWaiting = true;
 	    // 配信が開始されるまで待機しされたら接続する
 	    var waitingInterval = setInterval(function () {
 	        peer.listAllPeers(function (list) {
 	            for (var cnt = 0; cnt < list.length; cnt++) {
 	                // PeerIDのPrefixで判定
-	                if (list[cnt].substr(0, 8) == speakerPrefix) {
+	                if (list[cnt].substr(0, 8) == speakerPrefix && isWaiting) {
 	                    if (~list[cnt].indexOf('_skyway_')) {
 	                        streamingOptions.provider = 'skyway';
 	                    } else if (~list[cnt].indexOf('_anzu_')) {
@@ -259,6 +266,7 @@
 	                    }
 	                    startViewing(peer, viewInstance);
 	                    isWaiting = false;
+	                    clearInterval(waitingInterval);
 	                    break;
 	                }
 	            }
@@ -331,6 +339,18 @@
 	            }
 
 	            return _param;
+	        }
+
+	        /**
+	         * ブラウザチェック
+	         * @returns {boolean}
+	         */
+
+	    }, {
+	        key: 'usingChrome',
+	        value: function usingChrome() {
+	            var agent = window.navigator.userAgent.toLowerCase();
+	            return agent.indexOf('chrome') !== -1 && agent.indexOf('edge') === -1 && agent.indexOf('opr') === -1;
 	        }
 	    }]);
 
@@ -525,32 +545,33 @@
 	                var skywayDownstream = new Peer({ key: self.options.skywayAPIKey, debug: 1 });
 	                self.sfuInstatnce.skyway = skywayDownstream;
 	                skywayDownstream.on('open', function () {
-	                    navigator.mediaDevices.getUserMedia(_utility2.default.createGumConstraints(1, 1, 1)).then(function (stream) {
-	                        // success
-	                        var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu', stream: self._streamMute(stream) });
-	                        self.sfuInstatnce.skywayObject = sfuRoom;
-	                        console.log('Viewer ready.');
-	                        sfuRoom.on('stream', function (stream) {
-	                            if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                                console.log('receive stream');
-	                                resolve(stream);
-	                            }
+	                    var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu' });
+	                    self.sfuInstatnce.skywayObject = sfuRoom;
+	                    sfuRoom.on('open', function () {
+	                        self._dummyRoomJoin(self.options.skywayAPIKey, self.options.skywayRoomName, self.options.dummyPrefix).then(function () {
+	                            console.log('dummyRoomJoined');
+	                        }).catch(function (err) {
+	                            console.log('error');
 	                        });
-	                        sfuRoom.on('removeStream', function (stream) {
-	                            if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
-	                                console.log('remove');
-	                            }
-	                        });
-	                        sfuRoom.on('close', function () {
-	                            console.log('close peer');
-	                        });
-	                        sfuRoom.on('error', function (error) {
-	                            reject(error);
-	                        });
-	                    }).catch(function (error) {
-	                        // error
+	                    });
+	                    sfuRoom.on('stream', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('receive stream');
+	                            resolve(stream);
+	                        }
+	                    });
+	                    sfuRoom.on('removeStream', function (stream) {
+	                        if (stream.peerId.slice(0, 8) === 'UPSTREAM') {
+	                            console.log('remove');
+	                        }
+	                    });
+	                    sfuRoom.on('close', function () {
+	                        console.log('close peer');
+	                    });
+	                    sfuRoom.on('error', function (error) {
 	                        reject(error);
 	                    });
+	                    console.log('Viewer ready.');
 	                });
 	            });
 	        }
@@ -570,6 +591,37 @@
 	            result.addTrack(tempVideoTrack);
 	            result.addTrack(tempAudioTrack);
 	            return result;
+	        }
+
+	        /**
+	         * @private _dummyRoomJoin
+	         */
+
+	    }, {
+	        key: '_dummyRoomJoin',
+	        value: function _dummyRoomJoin(apikey, roomName, dummyPrefix) {
+	            return new Promise(function (resolve, reject) {
+	                var date = new Date();
+	                var dummyPeer = new Peer(dummyPrefix + date.getTime(), { key: apikey });
+	                dummyPeer.on('open', function () {
+	                    var dummyRoom = dummyPeer.joinRoom(roomName, { mode: 'sfu' });
+	                    dummyRoom.on('open', function () {
+	                        dummyRoom.close();
+	                        dummyPeer.destroy();
+	                        resolve();
+	                    });
+	                    dummyRoom.on('close', function () {
+	                        //dummyRoom.close();
+	                        //dummyPeer.destroy();
+	                        //resolve();
+	                    });
+	                    dummyRoom.on('error', function (err) {
+	                        dummyRoom.close();
+	                        dummyPeer.destroy();
+	                        reject();
+	                    });
+	                });
+	            });
 	        }
 	    }]);
 
@@ -1161,6 +1213,9 @@
 	    }, {
 	        key: 'initIndicator',
 	        value: function initIndicator() {
+	            var videoDom = $('#video')[0];
+	            videoDom.srcObject = null;
+
 	            var indicators_text = '';
 	            if (this.options.mode == 'speaker') {
 	                indicators_text = '配信者モードで起動中<BR>配信に使用するSFUを選択して下さい';
@@ -1205,20 +1260,25 @@
 
 	    _createClass(manager, [{
 	        key: 'getViewersCount',
-	        value: function getViewersCount(speakerPrefix) {
+	        value: function getViewersCount(speakerPrefix, dummyPrefix) {
 	            var self = this;
 	            return new Promise(function (resolve, reject) {
 	                self.peer.listAllPeers(function (list) {
 	                    var isSpeakerExist = false;
+	                    var dummyPeerCounter = 0;
 	                    for (var cnt = 0; cnt < list.length; cnt++) {
 	                        // PeerIDのPrefixで判定
-	                        if (list[cnt].substr(0, 8) == speakerPrefix) {
+	                        if (list[cnt].substr(0, speakerPrefix.length) == speakerPrefix) {
 	                            isSpeakerExist = true;
 	                            break;
 	                        }
+
+	                        if (list[cnt].substr(0, dummyPrefix.length) == dummyPrefix) {
+	                            dummyPeerCounter++;
+	                        }
 	                    }
 	                    // 配信者分は除きカウントする
-	                    resolve({ count: list.length - 1, isSpeakerExist: isSpeakerExist });
+	                    resolve({ count: list.length - 1 - dummyPeerCounter, isSpeakerExist: isSpeakerExist });
 	                });
 	            });
 	        }

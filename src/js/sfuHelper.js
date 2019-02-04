@@ -165,31 +165,35 @@ class sfuHelper {
             const skywayDownstream = new Peer({key: self.options.skywayAPIKey,debug: 1});
             self.sfuInstatnce.skyway = skywayDownstream;
             skywayDownstream.on('open', function(){
-                navigator.mediaDevices.getUserMedia(utility.createGumConstraints(1,1,1))
-                    .then(function (stream) { // success
-                        const sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu', stream: self._streamMute(stream)});
-                        self.sfuInstatnce.skywayObject = sfuRoom;
-                        console.log('Viewer ready.');
-                        sfuRoom.on('stream', function(stream) {
-                            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                                console.log('receive stream');
-                                resolve(stream);
-                            }
-                        });
-                        sfuRoom.on('removeStream', function(stream) {
-                            if(stream.peerId.slice(0,8) === 'UPSTREAM'){
-                                console.log('remove');
-                            }
-                        });
-                        sfuRoom.on('close', function() {
-                            console.log('close peer');
-                        });
-                        sfuRoom.on('error', function (error) {
-                            reject(error);
-                        });
-                    }).catch(function (error) { // error
+                const sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu',});
+                self.sfuInstatnce.skywayObject = sfuRoom;
+                sfuRoom.on('open', function() {
+                    self._dummyRoomJoin(self.options.skywayAPIKey,self.options.skywayRoomName,self.options.dummyPrefix)
+                        .then(function(){
+                            console.log('dummyRoomJoined');  
+                        })
+                        .catch(function(err){
+                            console.log('error')
+                        })
+                });
+                sfuRoom.on('stream', function(stream) {
+                    if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                        console.log('receive stream');
+                        resolve(stream);
+                    }
+                });
+                sfuRoom.on('removeStream', function(stream) {
+                    if(stream.peerId.slice(0,8) === 'UPSTREAM'){
+                        console.log('remove');
+                    }
+                });
+                sfuRoom.on('close', function() {
+                    console.log('close peer');
+                });
+                sfuRoom.on('error', function (error) {
                     reject(error);
                 });
+                console.log('Viewer ready.');
             });
         });
 
@@ -207,6 +211,34 @@ class sfuHelper {
         result.addTrack(tempVideoTrack);
         result.addTrack(tempAudioTrack);
         return result;
+    }
+
+    /**
+     * @private _dummyRoomJoin
+     */
+    _dummyRoomJoin(apikey,roomName,dummyPrefix){
+        return new Promise(function(resolve,reject){
+            let date = new Date();
+            const dummyPeer = new Peer(dummyPrefix + date.getTime(),{key: apikey});
+            dummyPeer.on('open',() => {
+                const dummyRoom = dummyPeer.joinRoom(roomName,{mode: 'sfu'});
+                dummyRoom.on('open',function(){
+                    dummyRoom.close();
+                    dummyPeer.destroy();
+                    resolve();
+                });
+                dummyRoom.on('close',function() {
+                    //dummyRoom.close();
+                    //dummyPeer.destroy();
+                    //resolve();
+                });
+                dummyRoom.on('error',function(err) {
+                    dummyRoom.close();
+                    dummyPeer.destroy();
+                    reject();
+                });
+            });
+        });
     }
 }
 

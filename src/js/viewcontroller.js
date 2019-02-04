@@ -94,6 +94,9 @@ class viewController {
     }
 
     initIndicator(){
+        const videoDom = $('#video')[0];
+        videoDom.srcObject = null;
+
         let indicators_text = '';
         if(this.options.mode == 'speaker'){
             indicators_text = '配信者モードで起動中<BR>配信に使用するSFUを選択して下さい';

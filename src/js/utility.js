@@ -46,6 +46,16 @@ class utility {
         return _param;
     }
 
+    /**
+     * ブラウザチェック
+     * @returns {boolean}
+     */
+    static usingChrome(){
+        const agent = window.navigator.userAgent.toLowerCase();
+        return (agent.indexOf('chrome') !== -1) && (agent.indexOf('edge') === -1)  && (agent.indexOf('opr') === -1);
+    }
+
+
 }
 
 export default utility;

@@ -5,23 +5,24 @@ import sfuHelper from './sfuHelper';
 import viewController from './viewController';
 import manager from './manager';
 
+const speakerPrefix = 'SPEAKER_';
+const dummyPrefix = 'DUMMY_';
 const managerOptions = {
-    skywayAPIKey: 'eef9d145-a76c-4ab7-8510-f697dadaef11',
+    skywayAPIKey: 'a134f02c-4b4f-4e4b-a742-3ac45dc3a384',
 };
 const sfuOptions = {
     anzuChannelId: 'BrWeoWi0N',
     anzuUpstreamToken: 'gwCF7fXsGRUofYC8Z',
-    skywayAPIKey: '423c2921-a505-412e-93da-98995c420323',
-    skywayRoomName: 'skeop2jvrnfesw2'
+    skywayAPIKey: 'd707b39d-e658-44ea-bf10-1ea26ef737fd',
+    skywayRoomName: 'skeop2jvrnfesw2',
+    dummyPrefix: dummyPrefix
 };
 
 const sfu = new sfuHelper(sfuOptions);
 
-const speakerPrefix = 'SPEAKER_';
-
 const interval = {
-    updateViewerCounter: 10000,
-    viewerWaiting: 5000
+    updateViewerCounter: 5000,
+    viewerWaiting: 3000
 };
 
 let streamingOptions = {
@@ -38,12 +39,14 @@ let viewOptions = {
 };
 
 let peer;
-
 let manage;
-
 let isAlreadySpeaker = false;
-
 let updateIntervalObj;
+
+if(!utility.usingChrome()){
+    alert('このサービスはGoogle Chrome専用です。');
+    window.location.href = 'https://www.google.com/intl/ja_ALL/chrome/';
+}
 
 if(utility.isSpeaker()){
     console.log('speaker mode');
@@ -161,7 +164,7 @@ function startViewing(p,v){
 }
 
 function updateViewerCounter(viewInstance){
-    manage.getViewersCount(speakerPrefix)
+    manage.getViewersCount(speakerPrefix,dummyPrefix)
         .then(function(result){
             viewInstance.updateIndicatorToBroadcastingMode(result.count);
             if(result.isSpeakerExist){
@@ -174,7 +177,7 @@ function updateViewerCounter(viewInstance){
         })
         .then(function(){
             updateIntervalObj = setInterval(function() {
-                manage.getViewersCount(speakerPrefix)
+                manage.getViewersCount(speakerPrefix,dummyPrefix)
                     .then(function(result){
                         viewInstance.updateIndicatorToBroadcastingMode(result.count);
                         if(result.isSpeakerExist){

@@ -168,7 +168,7 @@ class sfuHelper {
                 const sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, {mode: 'sfu',});
                 self.sfuInstatnce.skywayObject = sfuRoom;
                 sfuRoom.on('open', function() {
-                    self._dummyRoomJoin(self.options.skywayAPIKey,self.options.dummyPrefix)
+                    self._dummyRoomJoin(self.options.skywayAPIKey,self.options.skywayRoomName,self.options.dummyPrefix)
                         .then(function(){
                             console.log('dummyRoomJoined');  
                         })
@@ -216,23 +216,24 @@ class sfuHelper {
     /**
      * @private _dummyRoomJoin
      */
-    _dummyRoomJoin(apikey,dummyPrefix){
+    _dummyRoomJoin(apikey,roomName,dummyPrefix){
         return new Promise(function(resolve,reject){
             let date = new Date();
             const dummyPeer = new Peer(dummyPrefix + date.getTime(),{key: apikey});
             dummyPeer.on('open',() => {
-                const dummyRoom = dummyPeer.joinRoom('roomName',{mode: 'sfu'});
+                const dummyRoom = dummyPeer.joinRoom(roomName,{mode: 'sfu'});
                 dummyRoom.on('open',function(){
                     dummyRoom.close();
                     dummyPeer.destroy();
                     resolve();
                 });
                 dummyRoom.on('close',function() {
-                    dummyRoom.close();
-                    dummyPeer.destroy();
-                    resolve();
+                    //dummyRoom.close();
+                    //dummyPeer.destroy();
+                    //resolve();
                 });
                 dummyRoom.on('error',function(err) {
+                    dummyRoom.close();
                     dummyPeer.destroy();
                     reject();
                 });

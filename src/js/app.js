@@ -42,6 +42,7 @@ let peer;
 let manage;
 let isAlreadySpeaker = false;
 let updateIntervalObj;
+let isWaiting = true;
 
 if(!utility.usingChrome()){
     alert('このサービスはGoogle Chrome専用です。');
@@ -92,7 +93,9 @@ if(utility.isSpeaker()){
         }else if(result.status == 'stop'){
             // 配信を停止する
             sfu.stopStreamingViewing(streamingOptions);
+            // 管理用Roomから切断
             peer.destroy();
+
             clearInterval(updateIntervalObj);
             view.initIndicator();
         }
@@ -109,7 +112,8 @@ if(utility.isSpeaker()){
     peer.on('open', function() {
         // waitingViewer()を呼び出す形に変更したいがまだ動かない
 
-        let isWaiting = true;
+        if(isWaiting) waitingViewer(view);
+        /*
         // 配信が開始されるまで待機しされたら接続する
         const waitingInterval = setInterval(function(){
             peer.listAllPeers(function (list) {
@@ -123,6 +127,7 @@ if(utility.isSpeaker()){
                         }
                         startViewing(peer,view);
                         isWaiting = false;
+                        clearInterval(waitingInterval);
                         break;
                     }
                 }
@@ -130,7 +135,7 @@ if(utility.isSpeaker()){
                     clearInterval(waitingInterval);
                 }
             });
-        },interval.viewerWaiting);
+        },interval.viewerWaiting);*/
     });
 }
 
@@ -172,7 +177,7 @@ function updateViewerCounter(viewInstance){
                 // スピーカーが抜け場合は切断処理
                 viewInstance.initIndicator();
                 sfu.stopStreamingViewing(streamingOptions);
-                waitingViewer(viewInstance);
+                if(!isWaiting) waitingViewer(viewInstance);
             }
         })
         .then(function(){
@@ -185,7 +190,7 @@ function updateViewerCounter(viewInstance){
                             // スピーカーが抜け場合は切断処理
                             viewInstance.initIndicator();
                             sfu.stopStreamingViewing(streamingOptions);
-                            waitingViewer(viewInstance);
+                            if(!isWaiting) waitingViewer(viewInstance);
                         }
                     })
                     .catch(function(reason){
@@ -198,15 +203,14 @@ function updateViewerCounter(viewInstance){
         });
 }
 
-// メモ：配信停止時の視聴者側の処理はまだバグが有って動かない
 function waitingViewer(viewInstance){
-    let isWaiting = true;
+    isWaiting = true;
     // 配信が開始されるまで待機しされたら接続する
     const waitingInterval = setInterval(function(){
         peer.listAllPeers(function (list) {
             for (var cnt = 0; cnt < list.length; cnt++) {
                 // PeerIDのPrefixで判定
-                if (list[cnt].substr(0, 8) == speakerPrefix) {
+                if (list[cnt].substr(0, 8) == speakerPrefix && isWaiting) {
                     if(~list[cnt].indexOf('_skyway_')){
                         streamingOptions.provider = 'skyway';
                     }else if(~list[cnt].indexOf('_anzu_')){
@@ -214,6 +218,7 @@ function waitingViewer(viewInstance){
                     }
                     startViewing(peer,viewInstance);
                     isWaiting = false;
+                    clearInterval(waitingInterval);
                     break;
                 }
             }

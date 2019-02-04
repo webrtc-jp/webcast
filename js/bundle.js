@@ -101,6 +101,7 @@
 	var manage = void 0;
 	var isAlreadySpeaker = false;
 	var updateIntervalObj = void 0;
+	var isWaiting = true;
 
 	if (!_utility2.default.usingChrome()) {
 	    alert('このサービスはGoogle Chrome専用です。');
@@ -151,7 +152,9 @@
 	        } else if (result.status == 'stop') {
 	            // 配信を停止する
 	            sfu.stopStreamingViewing(streamingOptions);
+	            // 管理用Roomから切断
 	            peer.destroy();
+
 	            clearInterval(updateIntervalObj);
 	            view.initIndicator();
 	        }
@@ -168,28 +171,30 @@
 	    peer.on('open', function () {
 	        // waitingViewer()を呼び出す形に変更したいがまだ動かない
 
-	        var isWaiting = true;
+	        if (isWaiting) waitingViewer(_view);
+	        /*
 	        // 配信が開始されるまで待機しされたら接続する
-	        var waitingInterval = setInterval(function () {
+	        const waitingInterval = setInterval(function(){
 	            peer.listAllPeers(function (list) {
 	                for (var cnt = 0; cnt < list.length; cnt++) {
 	                    // PeerIDのPrefixで判定
 	                    if (list[cnt].substr(0, 8) == speakerPrefix) {
-	                        if (~list[cnt].indexOf('_skyway_')) {
+	                        if(~list[cnt].indexOf('_skyway_')){
 	                            streamingOptions.provider = 'skyway';
-	                        } else if (~list[cnt].indexOf('_anzu_')) {
+	                        }else if(~list[cnt].indexOf('_anzu_')){
 	                            streamingOptions.provider = 'anzu';
 	                        }
-	                        startViewing(peer, _view);
+	                        startViewing(peer,view);
 	                        isWaiting = false;
+	                        clearInterval(waitingInterval);
 	                        break;
 	                    }
 	                }
-	                if (!isWaiting) {
+	                if(!isWaiting){
 	                    clearInterval(waitingInterval);
 	                }
 	            });
-	        }, interval.viewerWaiting);
+	        },interval.viewerWaiting);*/
 	    });
 	}
 
@@ -225,7 +230,7 @@
 	            // スピーカーが抜け場合は切断処理
 	            viewInstance.initIndicator();
 	            sfu.stopStreamingViewing(streamingOptions);
-	            waitingViewer(viewInstance);
+	            if (!isWaiting) waitingViewer(viewInstance);
 	        }
 	    }).then(function () {
 	        updateIntervalObj = setInterval(function () {
@@ -235,7 +240,7 @@
 	                    // スピーカーが抜け場合は切断処理
 	                    viewInstance.initIndicator();
 	                    sfu.stopStreamingViewing(streamingOptions);
-	                    waitingViewer(viewInstance);
+	                    if (!isWaiting) waitingViewer(viewInstance);
 	                }
 	            }).catch(function (reason) {
 	                console.error(reason);
@@ -246,15 +251,14 @@
 	    });
 	}
 
-	// メモ：配信停止時の視聴者側の処理はまだバグが有って動かない
 	function waitingViewer(viewInstance) {
-	    var isWaiting = true;
+	    isWaiting = true;
 	    // 配信が開始されるまで待機しされたら接続する
 	    var waitingInterval = setInterval(function () {
 	        peer.listAllPeers(function (list) {
 	            for (var cnt = 0; cnt < list.length; cnt++) {
 	                // PeerIDのPrefixで判定
-	                if (list[cnt].substr(0, 8) == speakerPrefix) {
+	                if (list[cnt].substr(0, 8) == speakerPrefix && isWaiting) {
 	                    if (~list[cnt].indexOf('_skyway_')) {
 	                        streamingOptions.provider = 'skyway';
 	                    } else if (~list[cnt].indexOf('_anzu_')) {
@@ -262,6 +266,7 @@
 	                    }
 	                    startViewing(peer, viewInstance);
 	                    isWaiting = false;
+	                    clearInterval(waitingInterval);
 	                    break;
 	                }
 	            }
@@ -543,7 +548,7 @@
 	                    var sfuRoom = skywayDownstream.joinRoom(self.options.skywayRoomName, { mode: 'sfu' });
 	                    self.sfuInstatnce.skywayObject = sfuRoom;
 	                    sfuRoom.on('open', function () {
-	                        self._dummyRoomJoin(self.options.skywayAPIKey, self.options.dummyPrefix).then(function () {
+	                        self._dummyRoomJoin(self.options.skywayAPIKey, self.options.skywayRoomName, self.options.dummyPrefix).then(function () {
 	                            console.log('dummyRoomJoined');
 	                        }).catch(function (err) {
 	                            console.log('error');
@@ -594,23 +599,24 @@
 
 	    }, {
 	        key: '_dummyRoomJoin',
-	        value: function _dummyRoomJoin(apikey, dummyPrefix) {
+	        value: function _dummyRoomJoin(apikey, roomName, dummyPrefix) {
 	            return new Promise(function (resolve, reject) {
 	                var date = new Date();
 	                var dummyPeer = new Peer(dummyPrefix + date.getTime(), { key: apikey });
 	                dummyPeer.on('open', function () {
-	                    var dummyRoom = dummyPeer.joinRoom('roomName', { mode: 'sfu' });
+	                    var dummyRoom = dummyPeer.joinRoom(roomName, { mode: 'sfu' });
 	                    dummyRoom.on('open', function () {
 	                        dummyRoom.close();
 	                        dummyPeer.destroy();
 	                        resolve();
 	                    });
 	                    dummyRoom.on('close', function () {
-	                        dummyRoom.close();
-	                        dummyPeer.destroy();
-	                        resolve();
+	                        //dummyRoom.close();
+	                        //dummyPeer.destroy();
+	                        //resolve();
 	                    });
 	                    dummyRoom.on('error', function (err) {
+	                        dummyRoom.close();
 	                        dummyPeer.destroy();
 	                        reject();
 	                    });
@@ -1207,6 +1213,9 @@
 	    }, {
 	        key: 'initIndicator',
 	        value: function initIndicator() {
+	            var videoDom = $('#video')[0];
+	            videoDom.srcObject = null;
+
 	            var indicators_text = '';
 	            if (this.options.mode == 'speaker') {
 	                indicators_text = '配信者モードで起動中<BR>配信に使用するSFUを選択して下さい';

@@ -40,8 +40,8 @@ let viewOptions = {
 
 let peer;
 let manage;
-let isAlreadySpeaker = false;
 let updateIntervalObj;
+let isAlreadySpeaker = false;
 let isWaiting = true;
 
 if(!utility.usingChrome()){
@@ -67,7 +67,7 @@ if(utility.isSpeaker()){
             peer = new Peer({key: managerOptions.skywayAPIKey});
             peer.on('open', function () {
                 peer.listAllPeers(function (list) {
-                    for (var cnt = 0; cnt < list.length; cnt++) {
+                    for (let cnt = 0; cnt < list.length; cnt++) {
                         // PeerIDのPrefixで判定
                         if (list[cnt].substr(0, 8) == speakerPrefix) {
                             console.warn('speaker is already exist');
@@ -110,32 +110,7 @@ if(utility.isSpeaker()){
     view.createView();
     peer = new Peer({key: managerOptions.skywayAPIKey,debug: 1});
     peer.on('open', function() {
-        // waitingViewer()を呼び出す形に変更したいがまだ動かない
-
-        if(isWaiting) waitingViewer(view);
-        /*
-        // 配信が開始されるまで待機しされたら接続する
-        const waitingInterval = setInterval(function(){
-            peer.listAllPeers(function (list) {
-                for (var cnt = 0; cnt < list.length; cnt++) {
-                    // PeerIDのPrefixで判定
-                    if (list[cnt].substr(0, 8) == speakerPrefix) {
-                        if(~list[cnt].indexOf('_skyway_')){
-                            streamingOptions.provider = 'skyway';
-                        }else if(~list[cnt].indexOf('_anzu_')){
-                            streamingOptions.provider = 'anzu';
-                        }
-                        startViewing(peer,view);
-                        isWaiting = false;
-                        clearInterval(waitingInterval);
-                        break;
-                    }
-                }
-                if(!isWaiting){
-                    clearInterval(waitingInterval);
-                }
-            });
-        },interval.viewerWaiting);*/
+        if(isWaiting) waitingViewer(view);        
     });
 }
 
@@ -208,7 +183,7 @@ function waitingViewer(viewInstance){
     // 配信が開始されるまで待機しされたら接続する
     const waitingInterval = setInterval(function(){
         peer.listAllPeers(function (list) {
-            for (var cnt = 0; cnt < list.length; cnt++) {
+            for (let cnt = 0; cnt < list.length; cnt++) {
                 // PeerIDのPrefixで判定
                 if (list[cnt].substr(0, 8) == speakerPrefix && isWaiting) {
                     if(~list[cnt].indexOf('_skyway_')){

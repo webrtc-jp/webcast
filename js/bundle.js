@@ -99,8 +99,8 @@
 
 	var peer = void 0;
 	var manage = void 0;
-	var isAlreadySpeaker = false;
 	var updateIntervalObj = void 0;
+	var isAlreadySpeaker = false;
 	var isWaiting = true;
 
 	if (!_utility2.default.usingChrome()) {
@@ -169,32 +169,7 @@
 	    _view.createView();
 	    peer = new Peer({ key: managerOptions.skywayAPIKey, debug: 1 });
 	    peer.on('open', function () {
-	        // waitingViewer()を呼び出す形に変更したいがまだ動かない
-
 	        if (isWaiting) waitingViewer(_view);
-	        /*
-	        // 配信が開始されるまで待機しされたら接続する
-	        const waitingInterval = setInterval(function(){
-	            peer.listAllPeers(function (list) {
-	                for (var cnt = 0; cnt < list.length; cnt++) {
-	                    // PeerIDのPrefixで判定
-	                    if (list[cnt].substr(0, 8) == speakerPrefix) {
-	                        if(~list[cnt].indexOf('_skyway_')){
-	                            streamingOptions.provider = 'skyway';
-	                        }else if(~list[cnt].indexOf('_anzu_')){
-	                            streamingOptions.provider = 'anzu';
-	                        }
-	                        startViewing(peer,view);
-	                        isWaiting = false;
-	                        clearInterval(waitingInterval);
-	                        break;
-	                    }
-	                }
-	                if(!isWaiting){
-	                    clearInterval(waitingInterval);
-	                }
-	            });
-	        },interval.viewerWaiting);*/
 	    });
 	}
 

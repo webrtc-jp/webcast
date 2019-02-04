@@ -15,7 +15,7 @@ class manager {
             self.peer.listAllPeers(function (list) {
                 let isSpeakerExist = false;
                 let dummyPeerCounter = 0;
-                for (var cnt = 0; cnt < list.length; cnt++) {
+                for (let cnt = 0; cnt < list.length; cnt++) {
                     // PeerIDのPrefixで判定
                     if (list[cnt].substr(0, speakerPrefix.length) == speakerPrefix) {
                         isSpeakerExist = true;

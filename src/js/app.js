@@ -62,10 +62,8 @@ if(utility.isSpeaker()){
             } else if (result.selected == 'anzu') {
                 streamingOptions.provider = 'anzu';
             }
-
             // getUserMediaのConstraintsを生成する
             streamingOptions.gUMconstraints = utility.createGumConstraints(view.getVideoSource(),view.getAudioSource()),
-
             // 既にスピーカーが存在するかどうかのチェック
             peer = new Peer({key: managerOptions.skywayAPIKey});
             peer.on('open', function () {

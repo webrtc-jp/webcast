@@ -135,6 +135,16 @@ function startViewing(p,v){
         .then(function(stream){
             const videoDom = $('#video')[0];
             videoDom.srcObject = stream;
+            const playPromise = videoDom.play();
+            if (playPromise !== undefined) {
+                playPromise.then(function() {
+                    // 自動再生が成功した場合に発火
+                    console.log('auto play succeed');
+                }).catch(function(error) {
+                    // 自動再生に失敗した場合に発火
+                    console.log('error auto play:' + error);
+                });
+            }
             // 配信管理機能を初期化
             manage = new manager(p);
             updateViewerCounter(v);

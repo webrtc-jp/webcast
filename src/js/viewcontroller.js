@@ -27,6 +27,8 @@ class viewController {
                     $('#anzu-broadcast').prop("disabled", true);
                     $('#skyway-broadcast').text('配信を停止');
                     $('#skyway-broadcast').addClass('btn-warning');
+                    $('#audioSource').prop("disabled", true);
+                    $('#videoSource').prop("disabled", true);
                     self.status.isSkyWayBroadcasting = true;
                     result.status = 'start';
                     onClickCb(result);
@@ -34,6 +36,8 @@ class viewController {
                     $('#anzu-broadcast').prop("disabled", false);
                     $('#skyway-broadcast').text('SkyWayで配信');
                     $('#skyway-broadcast').removeClass('btn-warning');
+                    $('#audioSource').prop("disabled", false);
+                    $('#videoSource').prop("disabled", false);
                     self.status.isSkyWayBroadcasting = false;
                     result.status = 'stop';
                     onClickCb(result);
@@ -45,6 +49,8 @@ class viewController {
                     $('#skyway-broadcast').prop("disabled", true);
                     $('#anzu-broadcast').text('配信を停止');
                     $('#anzu-broadcast').addClass('btn-warning');
+                    $('#audioSource').prop("disabled", true);
+                    $('#videoSource').prop("disabled", true);
                     self.status.isAnzuBroadcasting = true;
                     result.status = 'start';
                     onClickCb(result);
@@ -52,6 +58,8 @@ class viewController {
                     $('#skyway-broadcast').prop("disabled", false);
                     $('#anzu-broadcast').text('Anzuで配信');
                     $('#anzu-broadcast').removeClass('btn-warning');
+                    $('#audioSource').prop("disabled", false);
+                    $('#videoSource').prop("disabled", false);
                     self.status.isAnzuBroadcasting = false;
                     result.status = 'stop';
                     onClickCb(result);
@@ -106,6 +114,45 @@ class viewController {
 
         $('#indicators').html(indicators_text);
 
+    }
+
+    createMediaSourceSelector(){
+        let audioSelect = $('#audioSource');
+        let videoSelect = $('#videoSource');
+
+        navigator.mediaDevices.getUserMedia({video:true,audio:true})
+            .then(function (stream) { // success
+                console.log('permission created'); 
+                navigator.mediaDevices.enumerateDevices()
+                .then(function(deviceInfos) {
+                    for (let i = 0; i !== deviceInfos.length; ++i) {
+                        let deviceInfo = deviceInfos[i];
+                        let option = $('<option>');
+                        option.val(deviceInfo.deviceId);
+                        if (deviceInfo.kind === 'audioinput') {
+                            option.text(deviceInfo.label);
+                            audioSelect.append(option);
+                        } else if (deviceInfo.kind === 'videoinput') {
+                            option.text(deviceInfo.label);
+                            videoSelect.append(option);
+                        }
+                    }
+                }).catch(function (error) {
+                    console.error('mediaDevices.enumerateDevices() error:', error);
+                    return;
+                }); 
+            })
+            .catch(function (error) { // error
+                console.log('permission denied');  
+            });  
+    }
+
+    getVideoSource(){
+        return $('#videoSource').val();
+    }
+
+    getAudioSource(){
+        return $('#audioSource').val();
     }
 
 }

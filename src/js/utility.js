@@ -15,12 +15,14 @@ class utility {
 
     /**
      * getUserMediaのOptionオブジェクトを生成する
+     * @param videoSource
+     * @param audioSource
      * @param width
      * @param height
      * @param framerate
      * @returns {*}
      */
-    static createGumConstraints(width,height,framerate) {
+    static createGumConstraints(videoSource,audioSource,width = null,height = null,framerate =null) {
 
         let _param = {
             video: {},
@@ -29,18 +31,25 @@ class utility {
 
         if (!!navigator.mozGetUserMedia) {
             // for FF
-            if (isFinite(width))
+            if (!isFinite(width))
                 _param.video.width = {min: width, max: width};
-            if (isFinite(height))
+            if (!isFinite(height))
                 _param.video.height = {min: height, max: height};
         }else{
             // for Chrome
-            if (isFinite(width))
+            if (!isFinite(width))
                 _param.video.width = {min: width, max: width};
-            if (isFinite(height))
+            if (!isFinite(height))
                 _param.video.height = {min: height, max: height};
-            if (isFinite(framerate))
+            if (!isFinite(framerate))
                 _param.video.frameRate = {min: framerate, max: framerate};
+        }
+
+        if(!isFinite(videoSource)) {
+            _param.video = {deviceId: {exact: videoSource}};
+        }
+        if(!isFinite(audioSource)) {
+            _param.audio = {deviceId: {exact: audioSource}};
         }
 
         return _param;
@@ -53,8 +62,7 @@ class utility {
     static usingChrome(){
         const agent = window.navigator.userAgent.toLowerCase();
         return (agent.indexOf('chrome') !== -1) && (agent.indexOf('edge') === -1)  && (agent.indexOf('opr') === -1);
-    }
-
+    }    
 
 }
 

@@ -27,11 +27,11 @@ const interval = {
 
 let streamingOptions = {
     provider: '',
-    //gUMconstraints: utility.createGumConstraints(1920,1080,29),
-    gUMconstraints: {
+    gUMconstraints: '',
+    /*gUMconstraints: {
         video: true,
         audio: true
-    }
+    }*/
 };
 
 let viewOptions = {
@@ -51,9 +51,9 @@ if(!utility.usingChrome()){
 
 if(utility.isSpeaker()){
     console.log('speaker mode');
-
     viewOptions.mode = 'speaker';
     const view = new viewController(viewOptions);
+    view.createMediaSourceSelector();
     view.createView(function(result){
         if (result.status == 'start') {
             // 配信を開始する
@@ -62,7 +62,8 @@ if(utility.isSpeaker()){
             } else if (result.selected == 'anzu') {
                 streamingOptions.provider = 'anzu';
             }
-
+            // getUserMediaのConstraintsを生成する
+            streamingOptions.gUMconstraints = utility.createGumConstraints(view.getVideoSource(),view.getAudioSource()),
             // 既にスピーカーが存在するかどうかのチェック
             peer = new Peer({key: managerOptions.skywayAPIKey});
             peer.on('open', function () {

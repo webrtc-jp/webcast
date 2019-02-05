@@ -86,11 +86,11 @@
 
 	var streamingOptions = {
 	    provider: '',
-	    //gUMconstraints: utility.createGumConstraints(1920,1080,29),
-	    gUMconstraints: {
+	    gUMconstraints: ''
+	    /*gUMconstraints: {
 	        video: true,
 	        audio: true
-	    }
+	    }*/
 	};
 
 	var viewOptions = {
@@ -110,9 +110,9 @@
 
 	if (_utility2.default.isSpeaker()) {
 	    console.log('speaker mode');
-
 	    viewOptions.mode = 'speaker';
 	    var view = new _viewController2.default(viewOptions);
+	    view.createMediaSourceSelector();
 	    view.createView(function (result) {
 	        if (result.status == 'start') {
 	            // 配信を開始する
@@ -121,6 +121,9 @@
 	            } else if (result.selected == 'anzu') {
 	                streamingOptions.provider = 'anzu';
 	            }
+
+	            // getUserMediaのConstraintsを生成する
+	            streamingOptions.gUMconstraints = _utility2.default.createGumConstraints(view.getVideoSource(), view.getAudioSource()),
 
 	            // 既にスピーカーが存在するかどうかのチェック
 	            peer = new Peer({ key: managerOptions.skywayAPIKey });
@@ -287,6 +290,8 @@
 
 	        /**
 	         * getUserMediaのOptionオブジェクトを生成する
+	         * @param videoSource
+	         * @param audioSource
 	         * @param width
 	         * @param height
 	         * @param framerate
@@ -295,7 +300,11 @@
 
 	    }, {
 	        key: 'createGumConstraints',
-	        value: function createGumConstraints(width, height, framerate) {
+	        value: function createGumConstraints(videoSource, audioSource) {
+	            var width = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+	            var height = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+	            var framerate = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
+
 
 	            var _param = {
 	                video: {},
@@ -304,13 +313,20 @@
 
 	            if (!!navigator.mozGetUserMedia) {
 	                // for FF
-	                if (isFinite(width)) _param.video.width = { min: width, max: width };
-	                if (isFinite(height)) _param.video.height = { min: height, max: height };
+	                if (!isFinite(width)) _param.video.width = { min: width, max: width };
+	                if (!isFinite(height)) _param.video.height = { min: height, max: height };
 	            } else {
 	                // for Chrome
-	                if (isFinite(width)) _param.video.width = { min: width, max: width };
-	                if (isFinite(height)) _param.video.height = { min: height, max: height };
-	                if (isFinite(framerate)) _param.video.frameRate = { min: framerate, max: framerate };
+	                if (!isFinite(width)) _param.video.width = { min: width, max: width };
+	                if (!isFinite(height)) _param.video.height = { min: height, max: height };
+	                if (!isFinite(framerate)) _param.video.frameRate = { min: framerate, max: framerate };
+	            }
+
+	            if (!isFinite(videoSource)) {
+	                _param.video = { deviceId: { exact: videoSource } };
+	            }
+	            if (!isFinite(audioSource)) {
+	                _param.audio = { deviceId: { exact: audioSource } };
 	            }
 
 	            return _param;
@@ -1125,6 +1141,8 @@
 	                        $('#anzu-broadcast').prop("disabled", true);
 	                        $('#skyway-broadcast').text('配信を停止');
 	                        $('#skyway-broadcast').addClass('btn-warning');
+	                        $('#audioSource').prop("disabled", true);
+	                        $('#videoSource').prop("disabled", true);
 	                        self.status.isSkyWayBroadcasting = true;
 	                        result.status = 'start';
 	                        onClickCb(result);
@@ -1132,6 +1150,8 @@
 	                        $('#anzu-broadcast').prop("disabled", false);
 	                        $('#skyway-broadcast').text('SkyWayで配信');
 	                        $('#skyway-broadcast').removeClass('btn-warning');
+	                        $('#audioSource').prop("disabled", false);
+	                        $('#videoSource').prop("disabled", false);
 	                        self.status.isSkyWayBroadcasting = false;
 	                        result.status = 'stop';
 	                        onClickCb(result);
@@ -1143,6 +1163,8 @@
 	                        $('#skyway-broadcast').prop("disabled", true);
 	                        $('#anzu-broadcast').text('配信を停止');
 	                        $('#anzu-broadcast').addClass('btn-warning');
+	                        $('#audioSource').prop("disabled", true);
+	                        $('#videoSource').prop("disabled", true);
 	                        self.status.isAnzuBroadcasting = true;
 	                        result.status = 'start';
 	                        onClickCb(result);
@@ -1150,6 +1172,8 @@
 	                        $('#skyway-broadcast').prop("disabled", false);
 	                        $('#anzu-broadcast').text('Anzuで配信');
 	                        $('#anzu-broadcast').removeClass('btn-warning');
+	                        $('#audioSource').prop("disabled", false);
+	                        $('#videoSource').prop("disabled", false);
 	                        self.status.isAnzuBroadcasting = false;
 	                        result.status = 'stop';
 	                        onClickCb(result);
@@ -1199,6 +1223,47 @@
 	            }
 
 	            $('#indicators').html(indicators_text);
+	        }
+	    }, {
+	        key: 'createMediaSourceSelector',
+	        value: function createMediaSourceSelector() {
+	            var audioSelect = $('#audioSource');
+	            var videoSelect = $('#videoSource');
+
+	            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(function (stream) {
+	                // success
+	                console.log('permission created');
+	                navigator.mediaDevices.enumerateDevices().then(function (deviceInfos) {
+	                    for (var i = 0; i !== deviceInfos.length; ++i) {
+	                        var deviceInfo = deviceInfos[i];
+	                        var option = $('<option>');
+	                        option.val(deviceInfo.deviceId);
+	                        if (deviceInfo.kind === 'audioinput') {
+	                            option.text(deviceInfo.label);
+	                            audioSelect.append(option);
+	                        } else if (deviceInfo.kind === 'videoinput') {
+	                            option.text(deviceInfo.label);
+	                            videoSelect.append(option);
+	                        }
+	                    }
+	                }).catch(function (error) {
+	                    console.error('mediaDevices.enumerateDevices() error:', error);
+	                    return;
+	                });
+	            }).catch(function (error) {
+	                // error
+	                console.log('permission denied');
+	            });
+	        }
+	    }, {
+	        key: 'getVideoSource',
+	        value: function getVideoSource() {
+	            return $('#videoSource').val();
+	        }
+	    }, {
+	        key: 'getAudioSource',
+	        value: function getAudioSource() {
+	            return $('#audioSource').val();
 	        }
 	    }]);
 
